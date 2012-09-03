@@ -1,0 +1,139 @@
+Curtis Maehony
+8/29/12
+
+1)
+cosc301@cosc301-VirtualBox:~$ ls
+cosc301ware  Documents  examples.desktop  Pictures  Templates
+Desktop      Downloads  Music             Public    Videos
+cosc301@cosc301-VirtualBox:~$ cd cosc301ware
+cosc301@cosc301-VirtualBox:~/cosc301ware$ cd homework
+cosc301@cosc301-VirtualBox:~/cosc301ware/homework$ cd hw01
+cosc301@cosc301-VirtualBox:~/cosc301ware/homework/hw01$ ls
+hw01.txt  systems.txt
+cosc301@cosc301-VirtualBox:~/cosc301ware/homework/hw01$ chmod 600 systems.txt
+cosc301@cosc301-VirtualBox:~/cosc301ware/homework/hw01$ ls -l
+total 12
+-rw-rw-r-- 1 cosc301 cosc301 6236 Aug 27 20:16 hw01.txt
+-rw------- 1 cosc301 cosc301   73 Aug 27 20:16 systems.txt
+
+2)
+perms.sh:
+#!/bin/bash
+
+chmod 600 systems.txt
+ls -l
+
+cosc301@cosc301-VirtualBox:~/cosc301ware/homework/hw01$ chmod 700 perms.sh
+
+3)
+Ran it already.
+
+The dot refers to the path to the current working directory, "hw01" in this case, and is a stand-in for the entire path to the working directory, "cosc301@cosc301-VirtualBox:~/cosc301ware/homework/hw01".
+
+The slash "finishes" the file path at a file (or directory) within the current directory--perms.sh in this case--and identifies that file for execution. If there had been two dots instead of one, then the slash would have indicated something in the grandparent directory, or could even have been continued to "../hw01/perms.sh".
+
+4)
+cosc301@cosc301-VirtualBox:~/cosc301ware/homework/hw01$ grep x systems.txt | wc -l
+4
+
+5)
+cosc301@cosc301-VirtualBox:~/cosc301ware/homework/hw01$ grep -v os systems.txt | wc -l
+7
+
+6)
+cosc301@cosc301-VirtualBox:~$ ps auxww | awk '{print $1, $4, $2}' | grep `whoami` |  sort -k4 -nr
+cosc301 5.9 3784
+cosc301 5.7 3665
+cosc301 5.7 1427
+cosc301 4.5 3758
+cosc301 3.4 2335
+cosc301 3.4 1442
+cosc301 2.7 2601
+cosc301 2.6 1426
+cosc301 2.2 1497
+cosc301 1.6 3562
+cosc301 1.5 1976
+cosc301 1.4 1449
+cosc301 1.3 3674
+cosc301 1.3 1792
+cosc301 1.3 1645
+cosc301 1.3 1411
+cosc301 1.2 1568
+cosc301 1.1 1707
+cosc301 1.1 1443
+cosc301 1.0 1447
+cosc301 0.9 1694
+cosc301 0.9 1683
+cosc301 0.9 1570
+cosc301 0.9 1510
+cosc301 0.9 1210
+cosc301 0.8 1698
+cosc301 0.8 1679
+cosc301 0.8 1614
+cosc301 0.7 1572
+cosc301 0.7 1451
+cosc301 0.7 1445
+cosc301 0.6 1571
+cosc301 0.6 1512
+cosc301 0.6 1504
+cosc301 0.6 1430
+cosc301 0.5 3677
+cosc301 0.5 3672
+cosc301 0.5 1689
+cosc301 0.5 1616
+cosc301 0.5 1569
+cosc301 0.5 1513
+cosc301 0.5 1508
+cosc301 0.4 3570
+cosc301 0.4 1608
+cosc301 0.4 1551
+cosc301 0.4 1506
+cosc301 0.3 3676
+cosc301 0.3 1897
+cosc301 0.3 1646
+cosc301 0.3 1484
+cosc301 0.3 1466
+cosc301 0.3 1299
+cosc301 0.3 1290
+cosc301 0.2 1884
+cosc301 0.2 1549
+cosc301 0.2 1494
+cosc301 0.2 1486
+cosc301 0.2 1478
+cosc301 0.2 1476
+cosc301 0.2 1441
+cosc301 0.2 1419
+cosc301 0.2 1347
+cosc301 0.2 1343
+cosc301 0.1 3895
+cosc301 0.1 1284
+cosc301 0.1 1279
+cosc301 0.1 1270
+cosc301 0.0 3898
+cosc301 0.0 3897
+cosc301 0.0 3896
+cosc301 0.0 3673
+cosc301 0.0 3569
+cosc301 0.0 1622
+cosc301 0.0 1289
+cosc301 0.0 1286
+
+#username, memory %, PID of program. Couldn't figure out how to keep the headings, and it wasn't exactly asked for, so. . . :)
+
+7)
+cosc301@cosc301-VirtualBox:~$ ps auxww | awk '{print $1}' | sort -k1 | uniq -c  |  sort -k1 -nr
+     76 cosc301
+     68 root
+      2 avahi
+      1 whoopsie
+      1 USER
+      1 syslog
+      1 rtkit
+      1 nobody
+      1 daemon
+      1 colord
+      1 102
+
+#surprisingly easy, that one. 6, not so much.
+##I retained ps auxww more out of debilitating fear that to do otherwise would invoke your wrath than just because I'm afraid of experimentation, honest.
+
