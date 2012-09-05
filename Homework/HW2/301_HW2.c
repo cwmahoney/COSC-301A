@@ -108,14 +108,28 @@ const char * (string_in(const char *str1, const char *str2)){
 	unsigned int len2 = strlen(str2);
 	unsigned int j, start;
 	unsigned int i = j = start = 0;
-
+	
+	char str1_low[len1+1];
+	char str2_low[len2+1];
+	
 	if(len1<len2){
 		return '\0';
 	}
+	
+	for(;i<len1;i++){ //doing conversion up here so only one pass is required for char_lower
+		str1_low[i]=char_lower(str1[i]);
+	}
+	str1_low[i]='\0';
+	i=0;
+	for(;i<len2;i++){
+		str2_low[i]=char_lower(str2[i]);
+	}
+	str2_low[i]='\0'; //making it a string
+	i=0;	
 
 	while(start<(len1-len2)){ //stop when impossible for the remainder of str1 to contain str2
 		i = start++; //restarting search at each index, no matter how far the last search got
-		while(char_lower(str1[i++])==char_lower(str2[j])){
+		while(str1_low[i++]==str2_low[j]){
 			if(str2[++j]=='\0'){
 				return &(str1[start-1]);
 			}
