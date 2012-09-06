@@ -97,6 +97,8 @@ char **tokenify(char *instr){
 
 	ret_arr[0] = strdup(strtok_r(str_copy,delim,saveptr));
 
+	printf("ARGH %s\n",ret_arr[0]);
+
 	for(;i<tok_count;i++){
 		ret_arr[i] = strdup(strtok_r(NULL,delim,saveptr));
 	}
