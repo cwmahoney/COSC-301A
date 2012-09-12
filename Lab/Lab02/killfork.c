@@ -1,15 +1,7 @@
-#include <stdio.h>
+#include <stdlib.h>
 
-int main(){
-	pid_t p = fork()
-	if(p==0){
-		exec(killfork.c);
+int main(int argc, char **argv){
+	while(1){
+		pid_t p = fork();
 	}
-	else if (p==-1){
-		printf("Fork error\n");
-	}
-	else{
-		printf("Can't stop the signal\n");
-	}
-	return 0;
 }
