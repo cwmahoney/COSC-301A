@@ -1,3 +1,9 @@
+/*
+Curtis Mahoney
+9-16-12
+COSC 301A HW3
+*/
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -13,26 +19,26 @@ Assuming that the linked list is ordered up to this point in time, insert a new 
 void list_insert_ordered(char *newname,  struct node **head) {
 	struct node *newnode=malloc(sizeof(struct node)); //Declaring new node
 	strncpy(newnode->name,newname,127);
-	struct node *temp=*head; //start at head and march through list linearly. Can't binary search with linked lists.
+	struct node *current=*head; //start at head and march through list linearly. Can't binary search with linked lists.
 
-	if((temp==NULL)||(strcasecmp(temp->name,newname)>=0)){ //No values in the list or the new node is lexigraphically smaller than or equal to the head
+	if((current==NULL)||(strcasecmp(current->name,newname)>=0)){ //No values in the list or the new node is lexigraphically smaller than or equal to the head
 		newnode->next = *head;
 		*head = newnode; //Place newnode as head of list
 		return;
 	}
 
-	while(temp->next!=NULL){ //Keep testing whether next node in line is greater than newnode, keep going if it's not. Stop at end of list.
-		if(strcasecmp(temp->next->name, newname)>=0){ //(next in line) >= newname, lexigraphically
-			struct node *t2 = temp->next;
-			temp->next=newnode;
-			newnode->next=t2; //Insert newnode after temp, with newnode->next being what temp used to point to.
+	while(current->next!=NULL){ //Keep testing whether next node in line is greater than newnode, keep going if it's not. Stop at end of list.
+		if(strcasecmp(current->next->name, newname)>=0){ //(next in line) >= newname, lexigraphically
+			struct node *t = current->next;
+			current->next=newnode;
+			newnode->next=t; //Insert newnode after current, with newnode->next being what current used to point to.
 			return;
 		}
 		else{ //next value is smaller than newnode's, roll on
-			temp=temp->next;
+			current=current->next;
 		}
 	}
-	temp->next=newnode;
+	current->next=newnode;
 	newnode->next = NULL; //Inserting node at the end of the linked list; newnode is lexigraphically greater than everything else
 }
 
