@@ -1,7 +1,7 @@
 /*
 Curtis Mahoney
 Cosc 301 HW 2
-9/4/2012
+9/5/2012
 */
 
 #include <stdio.h>
@@ -47,7 +47,7 @@ int main(int argc, char **argv){
 		printf("\"%s\" is not contained within \"%s\"\n", teststr2, teststr);
 	}
 	else{
-		printf("\"%s\" is contained within \"%s\" at index %d starting at memory location %p\n", teststr2, teststr, temp_prt-teststr, temp_ptr);
+		printf("\"%s\" is contained within \"%s\" at index %d starting at memory location %p\n", teststr2, teststr, (temp_ptr-teststr), temp_ptr);
 	}
 
 
