@@ -20,7 +20,7 @@ void removewhitespace(char *instr){ //Not clever, not efficient, but it will wor
 	int i = 0;
 	int j = 0;
 
-	for(;i<len;i++){
+	for(;i<len;i++){ //if you hit a whitespace, don't add it to teh temp_str
 		if(!isspace(instr[i])){
 			temp_str[j++]=instr[i];
 		}
@@ -28,7 +28,7 @@ void removewhitespace(char *instr){ //Not clever, not efficient, but it will wor
 	temp_str[j]='\0';
 	
 	i = 0;
-	for(;i<strlen(temp_str)+1;i++){
+	for(;i<strlen(temp_str)+1;i++){ //going up to and including the \0 at the end of temp_str
 		instr[i]=temp_str[i];
 	}
 }
@@ -74,35 +74,35 @@ char **tokenify(char *instr){
 	if(instr==NULL){
 		return NULL;
 	}
-	char *str_copy = strdup(instr);
+	char *str_copy = strdup(instr); //strtok_r() mangles the string, so I copy it
 
 	const char delim[3] = {' ','\n','\t'};
 	char *temp;
 	char **saveptr = &temp;
+	int tok_count = 0;
 
-	strtok_r(str_copy,delim,saveptr);
-	int tok_count = 1;
+	if(strtok_r(str_copy,delim,saveptr)!=NULL){
+		tok_count = 1;
+	}else{ //no tokens
+		return {instr};
+	}
 	
-	while(strtok_r(NULL,delim,saveptr)!=NULL){
+	while(strtok_r(NULL,delim,saveptr)!=NULL){ //counting the number of tokens
 		tok_count++;
 	}
 
 	char **ret_arr = malloc((tok_count+1)*sizeof(char *));
 	int i = 1;
-	free(str_copy);
+	free(str_copy); //freeing the first strdup()
 
 	str_copy = strdup(instr);
 
-	printf("instr %s\n",instr);
-
 	ret_arr[0] = strdup(strtok_r(str_copy,delim,saveptr));
 
-	printf("ARGH %s\n",ret_arr[0]);
-
-	for(;i<tok_count;i++){
+	for(;i<tok_count;i++){ //filling the array
 		ret_arr[i] = strdup(strtok_r(NULL,delim,saveptr));
 	}
-	free(str_copy);
+	free(str_copy); //freeing second strdup()
 
 	ret_arr[i]=NULL;
 

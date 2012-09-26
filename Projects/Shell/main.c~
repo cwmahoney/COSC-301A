@@ -58,7 +58,38 @@ void removeWhitespace(char *instr){ //Not clever, not efficient, but it will wor
 
 /*Returns a malloced array of malloced strings. Double freedom necessary*/
 char **tokenify(char *instr, const char delim[]){
-	//Adriana's code. Be sure to account for the delimeters being an input value
+	if(instr==NULL){
+		return NULL;
+	}
+	char *str_copy = strdup(instr); //strtok_r() mangles the string, so I copy it
+
+	char *temp;
+	char **saveptr = &temp;
+
+	if(strtok_r(str_copy,delim,saveptr)!=NULL){
+		int tok_count = 1;
+	}
+	
+	while(strtok_r(NULL,delim,saveptr)!=NULL){ //counting the number of tokens
+		tok_count++;
+	}
+
+	char **ret_arr = malloc((tok_count+1)*sizeof(char *));
+	int i = 1;
+	free(str_copy); //freeing the first strdup()
+
+	str_copy = strdup(instr);
+
+	ret_arr[0] = strdup(strtok_r(str_copy,delim,saveptr));
+
+	for(;i<tok_count;i++){ //filling the array
+		ret_arr[i] = strdup(strtok_r(NULL,delim,saveptr));
+	}
+	free(str_copy); //freeing second strdup()
+
+	ret_arr[i]=NULL;
+
+	return ret_arr;
 }
 
 /*Returns length of an array ending with a NULL in it's last index, regardless of array type*/
