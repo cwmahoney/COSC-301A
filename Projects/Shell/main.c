@@ -263,6 +263,7 @@ int main(int argc, char **argv) {
 		{		
 			cmd = clean_cmd_arr[i];
 			printf("Command: _%s_\n",cmd[0]);
+			printf("Num 2: _%s_\n",cmd[1]); //problem with (/bin/echo "str str"), broken up like nobody's business by tokenify
 
 			if(0==strcmp(cmd[0],"exit")){ //exit command given
 				printf("Exiting\n");
