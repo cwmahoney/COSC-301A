@@ -149,7 +149,7 @@ void execCmd(char **cmd){
 	pid_t p = fork();
     if (p == 0) {
         /* in child */
-		//printf("TESTING CHILD\n");
+		//printf("Running Child #\n");
         if (execv(cmd[0], cmd) < 0) {
             fprintf(stderr, "execv failed: %s\n", strerror(errno));
 			exit(0);
@@ -216,9 +216,6 @@ int main(int argc, char **argv) {
     char *buffer=malloc(sizeof(char *)*buffer_len);
 	buffer[0]='\0'; //initial value
 	char **cmd_arr;
-	_Bool mode = 1; //1 means sequential
-	int temp;
-	int j;
 
 	pid_t p = 1; //initial value for p
 
@@ -243,7 +240,6 @@ int main(int argc, char **argv) {
 		printf("Length of cmd_arr: %d\n",arrLen(cmd_arr));
 
 		while(cmd_arr[i]!=NULL){
-			//printf("TESTING\n");
 			temp_c=breakCommand(cmd_arr[i]); //malloced, remember
 			free(cmd_arr[i]);
 			if(temp_c!=NULL){
@@ -255,22 +251,21 @@ int main(int argc, char **argv) {
 		clean_cmd_arr[clean_len]=NULL;
 		
 		printf("cca len: %d\n",arrLen2(clean_cmd_arr));
-		
-		/*
-		printf("Buffer: %s",buffer);
-		printf("cmd_arr[0]: %s",cmd_arr[0]);*/
         
         //char *cmd[] = { "/bin/ls", "-l","-t", "-r", ".", NULL };
 
 		i=0;
-
+		char **cmd;
+		_Bool mode = 1; //1 means sequential
+		int temp;
+		int j;
 		for(;clean_cmd_arr[i]!=NULL;i++)  //i < length of clean_cmd_array
-		{			
-			char **cmd = clean_cmd_arr[i];
+		{		
+			cmd = clean_cmd_arr[i];
 			printf("Command: _%s_\n",cmd[0]);
 
 			if(0==strcmp(cmd[0],"exit")){ //exit command given
-				printf("Exiting\n",cmd[0]);
+				printf("Exiting\n");
 
 				//flushing memory				
 				for(;clean_cmd_arr[i]!=NULL;i++){
@@ -282,8 +277,6 @@ int main(int argc, char **argv) {
 				}
 				free(clean_cmd_arr);
 				free(buffer);
-				
-				exit(0); //"arg" of 0, because I need one. No idea what it means.
 			}
 			
 			temp = modeCheck(cmd,mode);
@@ -303,8 +296,10 @@ int main(int argc, char **argv) {
 					break; //break out of for-loop for child
 				} else if (p > 0) {
 					/* in parent */
-					int rstatus = 0;
-					waitpid(p,&rstatus,0); //will continue if child errors-out
+					if(mode){ //I have not the slightest idea as to whether or not this works
+						int rstatus = 0;
+						waitpid(p,&rstatus,0); //will continue if/when child errors-out
+					}
 				} else {
 					/* fork had an error; bail out */
 					fprintf(stderr, "fork failed: %s\n", strerror(errno));
@@ -320,7 +315,11 @@ int main(int argc, char **argv) {
 		}
 		if(p<=0){
 			break; //break out of while-loop for child
-		}	
+		}
+		if(!mode){
+			int nstatus = 0;
+			waitpid(0,&nstatus,0);
+		}
 		printf("%s", prompt);
 		fflush(stdout);
 
