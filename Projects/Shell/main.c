@@ -81,6 +81,7 @@ char** tokenify(char *s, const char delim[]) //Adriana's code, slightly modified
 	count = 0;
 	while (word != NULL) {
 		// allocate memory for each token
+		printf("Word: %s\n",word);
 		result[count] = strdup(word); //malloc
 		word = strtok_r(NULL, delim,saveptr);
 		count++;
@@ -116,7 +117,9 @@ char **breakCommand(char *instr){
 	}
 
 	int i =0;
-	while(isspace(instr[i++])); //necessary for super-trailing whitespace
+	while(isspace(instr[i])){ //necessary for super-trailing whitespace
+		i++;
+	}
 
 	if(instr[i]=='\0'){
 		return NULL;
@@ -128,14 +131,13 @@ char **breakCommand(char *instr){
 	if (tokened==NULL){
 		return NULL;
 	}
-			
 
 	char **ret_arr = malloc((t_len+1)*sizeof(char *)); //+2 for "." and NULL, -1 for the extraneous NULL in tokened
 	ret_arr[t_len-1]=".";
 	ret_arr[t_len]=NULL;
 
 	i = 0;
-	for(;i<t_len-1;i++){
+	for(;i<t_len-1;i++){ //don't want trailing NULL
 		ret_arr[i]=tokened[i];
 	}
 
@@ -168,6 +170,7 @@ int main(int argc, char **argv) {
 		printf("Length of cmd_arr: %d\n",arrLen(cmd_arr));
 
 		while(cmd_arr[i]!=NULL){
+			printf("TESTING\n");
 			temp_c=breakCommand(cmd_arr[i]); //malloced, remember
 			free(cmd_arr[i]);
 			if(temp_c!=NULL){
@@ -177,7 +180,6 @@ int main(int argc, char **argv) {
 		}
 		free(cmd_arr);
 		clean_cmd_arr[clean_len]=NULL;
-
 		
 		printf("cca len: %d\n",arrLen2(clean_cmd_arr));
 		
@@ -186,8 +188,6 @@ int main(int argc, char **argv) {
 		printf("cmd_arr[0]: %s",cmd_arr[0]);*/
         
         //char *cmd[] = { "/bin/ls", "-l","-t", "-r", ".", NULL };
-		
-		printf("Original: _%s_\n",clean_cmd_arr[0][0]);
 
 		i=0;
 
@@ -218,7 +218,11 @@ int main(int argc, char **argv) {
 		        /* fork had an error; bail out */
 		        fprintf(stderr, "fork failed: %s\n", strerror(errno));
 		    }
-	
+			
+			int j = 0;
+			for(;j<arrLen(clean_cmd_arr[i]-2);j++){
+				free(clean_cmd_arr[i][j]); //freeing each individual string, minus the const "." and NULL
+			}
 			free(clean_cmd_arr[i]);
 		}
 		printf("%s", prompt);
