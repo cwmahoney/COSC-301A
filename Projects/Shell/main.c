@@ -57,8 +57,40 @@ void removeWhitespace(char *instr){ //Not clever, not efficient, but it will wor
 }
 
 /*Returns a malloced array of malloced strings. Double freedom necessary*/
-char **tokenify(char *instr, const char delim[]){
-	//Adriana's code. Be sure to account for the delimeters being an input value
+char** tokenify(char *s, const char delim[]) //Adriana's code, slightly modified to add strtok_r, fix string-mangling
+{
+	char *copy, *word = NULL, **result = NULL;
+	// use strtok to count how many tokens are in the string in order to be able to allocate the correct
+	// amount of memory
+	copy = strdup(s);
+	int count = 0;
+	char *temp;
+	char **saveptr = &temp;
+
+	word = strtok_r(copy, delim,saveptr);
+	while (word != NULL) {
+		count++;
+		word = strtok_r(NULL, delim,saveptr);
+	}
+	free(copy);
+
+	// allocate pointers for each token + 1 for the NULL character at the end
+	copy = strdup(s);
+	result = malloc((count + 1) * sizeof(char*));
+	word = strtok_r(copy, delim,saveptr);
+	count = 0;
+	while (word != NULL) {
+		// allocate memory for each token
+		result[count] = strdup(word); //malloc
+		word = strtok_r(NULL, delim,saveptr);
+		count++;
+	}
+	free(copy);
+
+	// add the NULL terminator
+	result[count] = NULL;
+	// return values
+	return result;
 }
 
 /*Returns length of an array ending with a NULL in it's last index, regardless of array type*/
@@ -77,7 +109,7 @@ int arrLen2(char ***inarr){
 	return i;
 }
 
-/*Returns malloced array of strings formatted {<command>,<modifiers>,".",NULL} if a input or just {NULL} otherwise*/
+/*Returns malloced array of strings formatted {<command>,<modifiers>,".",NULL} if a valid input or just {NULL} otherwise*/
 char **breakCommand(char *instr){
 	if(instr==NULL){
 		return NULL;
@@ -90,9 +122,7 @@ char **breakCommand(char *instr){
 		return NULL;
 	}
 
-	const char temp_d[3]={' ','\t','\n'}; //delimeters for tokenify
-	printf("INSTR: _%s_\n",instr);
-	char **tokened=tokenify(instr,temp_d); //everthing in tokened is malloced
+	char **tokened=tokenify(instr," \t\n"); //everthing in tokened is malloced
 	int t_len = arrLen(tokened);
 
 	if (tokened==NULL){
@@ -100,12 +130,12 @@ char **breakCommand(char *instr){
 	}
 			
 
-	char **ret_arr = malloc((t_len+2)*sizeof(char *)); //+2 for "." and NULL
-	ret_arr[t_len]=".";
-	ret_arr[t_len+1]=NULL;
+	char **ret_arr = malloc((t_len+1)*sizeof(char *)); //+2 for "." and NULL, -1 for the extraneous NULL in tokened
+	ret_arr[t_len-1]=".";
+	ret_arr[t_len]=NULL;
 
 	i = 0;
-	for(;i<t_len;i++){
+	for(;i<t_len-1;i++){
 		ret_arr[i]=tokened[i];
 	}
 
@@ -122,14 +152,13 @@ int main(int argc, char **argv) {
     char *buffer=malloc(sizeof(char *)*buffer_len);
 	buffer[0]='\0'; //initial value
 	char **cmd_arr;
-	const char temp_d[2]={';','\n'}; //delimeter for tokenify
 
     while (fgets(buffer, buffer_len, stdin) != NULL) {
         /* process current command line in buffer */
         /* just a hard-coded command here right now */
 
 		killComments(buffer,buffer_len); //Buffer is always a string
-		cmd_arr = tokenify(buffer,temp_d); //array of strings, everything is on the heap
+		cmd_arr = tokenify(buffer,";"); //array of strings, everything is on the heap
 		
 		int i = 0;
 		int clean_len = 0;
@@ -139,11 +168,8 @@ int main(int argc, char **argv) {
 		printf("Length of cmd_arr: %d\n",arrLen(cmd_arr));
 
 		while(cmd_arr[i]!=NULL){
-			printf("cmd: _%s_ %d\n",cmd_arr[i],i);
 			temp_c=breakCommand(cmd_arr[i]); //malloced, remember
 			free(cmd_arr[i]);
-			
-			printf("temp_c: %p\n",temp_c);
 			if(temp_c!=NULL){
 				clean_cmd_arr[clean_len++]=temp_c;
 			}
@@ -161,14 +187,14 @@ int main(int argc, char **argv) {
         
         //char *cmd[] = { "/bin/ls", "-l","-t", "-r", ".", NULL };
 		
-		printf("Original: %s\n",clean_cmd_arr[0][0]);
+		printf("Original: _%s_\n",clean_cmd_arr[0][0]);
 
 		i=0;
 
-		for(;i<clean_len;i++)  //i < length of clean_cmd_array
+		for(;clean_cmd_arr[i]!=NULL;i++)  //i < length of clean_cmd_array
 		{
 			char **cmd = clean_cmd_arr[i];
-			printf("Command: %s\n",cmd[i]);
+			printf("Command: _%s_\n",cmd[0]);
 
 		    pid_t p = fork();
 		    if (p == 0) {
@@ -192,12 +218,13 @@ int main(int argc, char **argv) {
 		        /* fork had an error; bail out */
 		        fprintf(stderr, "fork failed: %s\n", strerror(errno));
 		    }
-
-		    printf("%s", prompt);
-		    fflush(stdout);
 	
 			free(clean_cmd_arr[i]);
 		}
+		printf("%s", prompt);
+		fflush(stdout);
+
+		free(clean_cmd_arr);
 		//printf("TESTING\n");
     }
 	free(buffer);
