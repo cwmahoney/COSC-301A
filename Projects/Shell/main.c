@@ -277,6 +277,8 @@ int main(int argc, char **argv) {
 				}
 				free(clean_cmd_arr);
 				free(buffer);
+
+				exit(0); //just a random # here
 			}
 			
 			temp = modeCheck(cmd,mode);
