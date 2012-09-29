@@ -207,6 +207,7 @@ int modeCheck(char **cmd, _Bool mode){
 	return -1; //an int, not a bool
 }
 
+//Need to deal with string input, parallel vs. sequential, user vs. kernal time, switch Exit so that it delays if it's in the middle of a command sequence (so p1;exit;p2 should allow both p1 and p2 to run)
 int main(int argc, char **argv) {
     char *prompt = "hitme> ";
     printf("%s", prompt);
