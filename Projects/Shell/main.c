@@ -2,7 +2,7 @@
  * project 1 (shell) main.c template 
  *
  * Curtis Mahoney, Adriana Sperlea
- * -Curt worked on the backbone code, borrowing Adriana's functioning tokenify and implementing all Stage 1 functionality besides implementation of parallel/sequential modes, proper handling of string literal on input, and CPU time.
+ * -Curt worked on the backbone code, borrowing Adriana's functioning tokenify and implementing all Stage 1 functionality besides implementation of parallel/sequential modes, and CPU time.
  *
  */
 
@@ -35,7 +35,8 @@ void killComments(char *input,int len){
 
 //From lab01
 
-/*Removes given characters*/
+
+/*Removes given characters*//*
 void removeCharacters(char *instr, const char *tgt){ //Not clever, not efficient, but it will work
 	if(instr==NULL){
 		return;
@@ -62,7 +63,7 @@ void removeCharacters(char *instr, const char *tgt){ //Not clever, not efficient
 		instr[i]=temp_str[i];
 	}
 }
-
+*/
 /*Returns a malloced array of malloced strings. Double freedom necessary*/
 char** tokenify(char *s, const char delim[]) //Adriana's code, slightly modified to add strtok_r, fix string-mangling
 {
@@ -145,13 +146,7 @@ char **breakCommand(char *instr){
 		return NULL;
 	}
 
-	char* copy = strdup(instr);
-	removeCharacters(copy,"\""); //takes out double-quotation marks
-	printf("Copy: %s\n",copy);
-
-	char **tokened=tokenify(copy," \t\n"); //everthing in tokened is malloced
-
-	free(copy);
+	char **tokened=tokenify(instr," \t\n"); //everthing in tokened is malloced
 
 	return tokened;
 }
@@ -232,7 +227,7 @@ char modeCheck(char **cmd, char mode){
 
 //Need to deal with string-literal input, parallel vs. sequential, user vs. kernal time, EOF-checkery
 int main(int argc, char **argv){
-    char *prompt = "hitme> ";
+    char *prompt = "CMAS> ";
     printf("%s", prompt);
     fflush(stdout);
 	const int buffer_len=1024;
@@ -243,14 +238,8 @@ int main(int argc, char **argv){
 
 	pid_t p = 1; //initial value for p
 
-    while (fgets(buffer, buffer_len, stdin) != NULL) {
+    while (fgets(buffer, buffer_len, stdin) != NULL) { //works as an EOF checker, according to Prof.
         /* process current command line in buffer */
-
-		if(buffer[0]==EOF){
-			printf("Got it\n\n");
-			free(buffer); //flushing memory
-			exit(0);
-		}
 
 		killComments(buffer,buffer_len); //Buffer is always a string
 		cmd_arr = tokenify(buffer,";"); //array of strings, everything is on the heap
@@ -331,26 +320,34 @@ int main(int argc, char **argv){
 					//printf("TESTING\n");
 				}
 			}
-			if((clean_cmd_arr[i+1]==NULL)&&(will_exit)){//finished commands and exit given at some point
-				printf("Exiting\n");
-				//flushing memory
-				free(clean_cmd_arr);
-				free(buffer);
-
-				exit(0); //just a random # here
-			}
 		}
 		//after all commands executed
 
-		if(p<=0){ 
+		if(p<=0){
 			break; //break out of while-loop for child
 		}
 
-		if(mode=='p'){ //pathetic attempt at sequential/parallel
-			int nstatus = 0;
-			waitpid(0,&nstatus,0);
+		if((mode=='p')&&(p>0)){ //Should wait for all children if main program. Doesn't
+			pid_t pid;
+			printf("STALLNG\n");
+			//waits for all children
+			while ((pid = waitpid(-1, NULL, 0))) { //the internet is beautiful
+			   if (errno == ECHILD) {
+				  break;
+			   }
+			}
 		}
+		//works if I switch mode as part of the command input
+
 		free(clean_cmd_arr);
+
+		if(will_exit){//finished commands and exit given at some point
+			//printf("Exiting\n");
+			//flushing memory
+			free(buffer);
+
+			exit(0); //just a random # here
+		}
 
 		printf("%s", prompt);
 		fflush(stdout);
