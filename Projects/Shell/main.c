@@ -230,7 +230,7 @@ char modeCheck(char **cmd, char mode){
 	return 'n'; //an int, not a bool
 }
 
-//Need to deal with string-literal input, parallel vs. sequential, user vs. kernal time
+//Need to deal with string-literal input, parallel vs. sequential, user vs. kernal time, EOF-checkery
 int main(int argc, char **argv){
     char *prompt = "hitme> ";
     printf("%s", prompt);
