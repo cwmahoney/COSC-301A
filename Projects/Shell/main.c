@@ -2,6 +2,7 @@
  * project 1 (shell) main.c template 
  *
  * Curtis Mahoney, Adriana Sperlea
+ * -Curt worked on the backbone code, borrowing Adriana's functioning tokenify and implementing all Stage 1 functionality besides implementation of parallel/sequential modes, proper handling of string literal on input, and CPU time.
  *
  */
 
@@ -33,29 +34,6 @@ void killComments(char *input,int len){
 }
 
 //From lab01
-void removeWhitespace(char *instr){ //Not clever, not efficient, but it will work
-	if(instr==NULL){
-		return;
-	}
-
-	unsigned int len = strlen(instr);
-	char temp_str[len+1];
-	int i = 0;
-	int j = 0;
-
-	for(;i<len;i++){ //if you hit a whitespace, don't add it to teh temp_str
-		if(!isspace(instr[i])){
-			temp_str[j++]=instr[i];
-		}
-	}
-	temp_str[j]='\0';
-	
-	i = 0;
-	for(;i<strlen(temp_str)+1;i++){ //going up to and including the \0 at the end of temp_str
-		instr[i]=temp_str[i];
-	}
-}
-
 /*Returns a malloced array of malloced strings. Double freedom necessary*/
 char** tokenify(char *s, const char delim[]) //Adriana's code, slightly modified to add strtok_r, fix string-mangling
 {
@@ -66,6 +44,21 @@ char** tokenify(char *s, const char delim[]) //Adriana's code, slightly modified
 	int count = 0;
 	char *temp;
 	char **saveptr = &temp;
+
+	/*
+	int i = 0;
+
+	while(copy[i]!='\0'){
+		if(copy[i]=='\"'){
+			while(copy[i]!='\0'){
+				if(copy[i]=='\"'){
+					
+				}
+			}
+		}
+
+	}*/
+	
 
 	word = strtok_r(copy, delim,saveptr);
 	while (word != NULL) {
@@ -109,7 +102,7 @@ int arrLen2(char ***inarr){
 	return i;
 }
 
-/*Returns malloced array of strings formatted {<command>,<modifiers>,".",NULL} if a valid input or just {NULL} otherwise*/
+/*Returns malloced array of strings formatted {<command>,<arg0>, <arg1>,...} if a valid input or just NULL otherwise*/
 char **breakCommand(char *instr){
 	if(instr==NULL){
 		return NULL;
@@ -125,23 +118,8 @@ char **breakCommand(char *instr){
 	}
 
 	char **tokened=tokenify(instr," \t\n"); //everthing in tokened is malloced
-	int t_len = arrLen(tokened);
 
-	if (tokened==NULL){
-		return NULL;
-	}
-
-	char **ret_arr = malloc((t_len+1)*sizeof(char *)); //+2 for "." and NULL, -1 for the extraneous NULL in tokened
-	ret_arr[t_len-1]=".";
-	ret_arr[t_len]=NULL;
-
-	i = 0;
-	for(;i<t_len-1;i++){ //don't want trailing NULL
-		ret_arr[i]=tokened[i];
-	}
-
-	free(tokened);
-	return ret_arr;
+	return tokened;
 }
 
 /*Executes a single command cmd*/
@@ -175,27 +153,38 @@ void execCmd(char **cmd){
     }
 }
 
-int modeCheck(char **cmd, _Bool mode){
+char modeCheck(char **cmd, char mode){
 	if(!strcmp(cmd[0],"mode")){ //mode command given
+		if(cmd[1]==NULL){ //nothing trailing
+			printf("Current mode: ");
+			if(mode=='p'){
+				printf("PARALLEL");
+			}else{
+				printf("SEQUENTIAL");
+			}
+			printf("\n");
+			return mode;
+		}
+
 		if((0==strcmp(cmd[1],"p"))||(0==strcmp(cmd[1],"parallel"))){
-			if(mode){ //bool == 1 means sequential
+			if(mode=='s'){ //bool == 1 means sequential
 				printf("Switched to PARALLEL mode\n");
-				mode = !mode;
+				return('p');
 			}
 			else{
 				printf("Already in PARALLEL mode\n");
 			}
 		}else if((0==strcmp(cmd[1],"s"))||(0==strcmp(cmd[1],"sequential"))){
-			if(!mode){ //bool == 0 means parallel
+			if(mode=='p'){ //bool == 0 means parallel
 				printf("Switched to SEQUENTIAL mode\n");
-				mode = !mode;
+				return('s');
 			}
 			else{
 				printf("Already in SEQUENTIAL mode\n");
 			}
 		}else{ //Not sure if invalid follow-up to mode should be allowed. I assume it is.
-			printf("Current mode is ");
-			if(!mode){
+			printf("Current mode: ");
+			if(mode=='p'){
 				printf("PARALLEL");
 			}else{
 				printf("SEQUENTIAL");
@@ -204,25 +193,24 @@ int modeCheck(char **cmd, _Bool mode){
 		}
 		return mode;		
 	}
-	return -1; //an int, not a bool
+	return 'n'; //an int, not a bool
 }
 
-//Need to deal with string input, parallel vs. sequential, user vs. kernal time, switch Exit so that it delays if it's in the middle of a command sequence (so p1;exit;p2 should allow both p1 and p2 to run)
-int main(int argc, char **argv) {
+//Need to deal with string-literal input, parallel vs. sequential, user vs. kernal time
+int main(int argc, char **argv){
     char *prompt = "hitme> ";
     printf("%s", prompt);
     fflush(stdout);
 	const int buffer_len=1024;
-    
     char *buffer=malloc(sizeof(char *)*buffer_len);
 	buffer[0]='\0'; //initial value
 	char **cmd_arr;
+	char mode = 's'; //Mode "bit." 's' means sequential
 
 	pid_t p = 1; //initial value for p
 
     while (fgets(buffer, buffer_len, stdin) != NULL) {
         /* process current command line in buffer */
-        /* just a hard-coded command here right now */
 
 		if(buffer[0]==EOF){
 			printf("Got it\n\n");
@@ -257,77 +245,81 @@ int main(int argc, char **argv) {
 
 		i=0;
 		char **cmd;
-		_Bool mode = 1; //1 means sequential
-		int temp;
+		char temp_m;
 		int j;
+		_Bool will_exit = 0;
 		for(;clean_cmd_arr[i]!=NULL;i++)  //i < length of clean_cmd_array
-		{		
+		{
 			cmd = clean_cmd_arr[i];
 			printf("Command: _%s_\n",cmd[0]);
-			printf("Num 2: _%s_\n",cmd[1]); //problem with (/bin/echo "str str"), broken up like nobody's business by tokenify
+			//printf("Num 2: _%s_\n",cmd[1]); //problem with (/bin/echo "str str"), broken up like nobody's business by tokenify
 
 			if(0==strcmp(cmd[0],"exit")){ //exit command given
-				printf("Exiting\n");
-
-				//flushing memory				
-				for(;clean_cmd_arr[i]!=NULL;i++){
+				will_exit = 1; //will exit later
+				j = 0;
+				for(;j<arrLen(clean_cmd_arr[i]);j++){
+					free(clean_cmd_arr[i][j]); //freeing each individual string
+				}
+				free(clean_cmd_arr[i]);
+			}else
+			{	 //not an "exit" command		
+				temp_m = modeCheck(cmd,mode);
+				if('n'!=temp_m){ //flushing memory if we hit "mode"
+					mode=temp_m;
 					j = 0;
-					for(;j<arrLen(clean_cmd_arr[i])-2;j++){
+					for(;j<arrLen(clean_cmd_arr[i]);j++){
 						free(clean_cmd_arr[i][j]);
 					}
 					free(clean_cmd_arr[i]);
+				}else
+				{ //no "mode" starting cmd
+					p = fork();
+					if (p == 0) {
+						/* in child */
+						execCmd(cmd); //carry out one process at a time
+						break; //break out of for-loop for child
+					} else if (p > 0) {
+						/* in parent */
+						if(mode=='s'){ //I have not the slightest idea as to whether or not this works
+							int rstatus = 0;
+							waitpid(p,&rstatus,0); //will continue if/when child errors-out
+						}
+					} else {
+						/* fork had an error; bail out */
+						fprintf(stderr, "fork failed: %s\n", strerror(errno));
+					}			
+
+					j = 0;
+					for(;j<arrLen(clean_cmd_arr[i]);j++){
+						free(clean_cmd_arr[i][j]); //freeing each individual string
+					}
+					free(clean_cmd_arr[i]);
+					//printf("TESTING\n");
 				}
+			}
+			if((clean_cmd_arr[i+1]==NULL)&&(will_exit)){//finished commands and exit given at some point
+				printf("Exiting\n");
+				//flushing memory
 				free(clean_cmd_arr);
 				free(buffer);
 
 				exit(0); //just a random # here
 			}
-			
-			temp = modeCheck(cmd,mode);
-			if(-1!=temp){ //flushing memory if we hit "mode"
-				mode=temp;
-				j = 0;
-				for(;j<arrLen(clean_cmd_arr[i])-2;j++){
-					free(clean_cmd_arr[i][j]);
-				}
-				free(clean_cmd_arr[i]);
-			}else
-			{ //no "mode" starting cmd
-				p = fork();
-				if (p == 0) {
-					/* in child */
-					execCmd(cmd); //carry out one process at a time
-					break; //break out of for-loop for child
-				} else if (p > 0) {
-					/* in parent */
-					if(mode){ //I have not the slightest idea as to whether or not this works
-						int rstatus = 0;
-						waitpid(p,&rstatus,0); //will continue if/when child errors-out
-					}
-				} else {
-					/* fork had an error; bail out */
-					fprintf(stderr, "fork failed: %s\n", strerror(errno));
-				}			
-
-				j = 0;
-				for(;j<arrLen(clean_cmd_arr[i])-2;j++){
-					free(clean_cmd_arr[i][j]); //freeing each individual string, minus the const "." and NULL
-				}
-				free(clean_cmd_arr[i]);
-				//printf("TESTING\n");
-			}
 		}
-		if(p<=0){
+		//after all commands executed
+
+		if(p<=0){ 
 			break; //break out of while-loop for child
 		}
-		if(!mode){
+
+		if(mode=='p'){ //pathetic attempt at sequential/parallel
 			int nstatus = 0;
 			waitpid(0,&nstatus,0);
 		}
+		free(clean_cmd_arr);
+
 		printf("%s", prompt);
 		fflush(stdout);
-
-		free(clean_cmd_arr);
 		//printf("TESTING\n");
     }
 	if(p>0){ //only free buffer in parent at end
