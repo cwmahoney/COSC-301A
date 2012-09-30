@@ -34,6 +34,35 @@ void killComments(char *input,int len){
 }
 
 //From lab01
+
+/*Removes given characters*/
+void removeCharacters(char *instr, const char *tgt){ //Not clever, not efficient, but it will work
+	if(instr==NULL){
+		return;
+	}
+
+	unsigned int len = strlen(instr);
+	char temp_str[len+1];
+	int i = 0;
+	int j = 0;
+	int k = 0;
+
+	for(;i<len;i++){ //if you hit a whitespace, don't add it to teh temp_str
+		k=0;		
+		for(;k<strlen(tgt);k++){
+			if(tgt[k]!=instr[i]){
+				temp_str[j++]=instr[i];
+			}
+		}
+	}
+	temp_str[j]='\0';
+	
+	i = 0;
+	for(;i<strlen(temp_str)+1;i++){ //going up to and including the \0 at the end of temp_str
+		instr[i]=temp_str[i];
+	}
+}
+
 /*Returns a malloced array of malloced strings. Double freedom necessary*/
 char** tokenify(char *s, const char delim[]) //Adriana's code, slightly modified to add strtok_r, fix string-mangling
 {
@@ -58,7 +87,6 @@ char** tokenify(char *s, const char delim[]) //Adriana's code, slightly modified
 		}
 
 	}*/
-	
 
 	word = strtok_r(copy, delim,saveptr);
 	while (word != NULL) {
@@ -117,7 +145,13 @@ char **breakCommand(char *instr){
 		return NULL;
 	}
 
-	char **tokened=tokenify(instr," \t\n"); //everthing in tokened is malloced
+	char* copy = strdup(instr);
+	removeCharacters(copy,"\""); //takes out double-quotation marks
+	printf("Copy: %s\n",copy);
+
+	char **tokened=tokenify(copy," \t\n"); //everthing in tokened is malloced
+
+	free(copy);
 
 	return tokened;
 }
