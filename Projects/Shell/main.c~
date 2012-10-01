@@ -163,7 +163,6 @@ pid_t execCmd(char **cmd, char mode){
 		if(mode=='s'){ //only wait in sequential mode
 		    int rstatus = 0;
 		    waitpid(p,&rstatus,0); //will continue if child errors-out
-			return 0;
 		}
 		//printf("Parent done\n");
     } else {
@@ -282,10 +281,9 @@ int main(int argc, char **argv){
 		}
 		//after all commands executed
 		
-		
 		i=0;
 		for(;i<clean_len;i++){ //parallel processing, only works for Stage 1
-			if(kids[i]!=0){ //only waits for real kids, sequential parents return 0
+			if(kids[i]!=0){ //only waits for real kids
 				waitpid(kids[i],NULL,0);
 			}
 		}
