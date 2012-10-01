@@ -6,6 +6,8 @@
  *
  */
 
+//Favorite test case: /bin/ls;;;asfdasdf  ;;asdf  ;; sfd; /sdf.' ;/bin/sleep 5;/bin/echo done;mode s;/bin/sleep 5;/bin/ls;exit
+
 /* you probably won't need any other header files for this project */
 #include <stdio.h>
 #include <stdlib.h>
@@ -260,7 +262,7 @@ int main(int argc, char **argv){
 		char temp_m;
 		int j;
 		_Bool will_exit = 0;
-		pid_t *kids = malloc(sizeof(pid_t)*clean_len);
+		pid_t *kids = malloc(sizeof(pid_t)*(clean_len)); //num of cmds minus NULL
 		for(;clean_cmd_arr[i]!=NULL;i++)  //i < length of clean_cmd_array
 		{
 			kids[i]=0;
@@ -282,10 +284,9 @@ int main(int argc, char **argv){
 		}
 		//after all commands executed
 		
-		
 		i=0;
 		for(;i<clean_len;i++){ //parallel processing, only works for Stage 1
-			if(kids[i]!=0){ //only waits for real kids, sequential parents return 0
+			if(kids[i]>0){ //only checks for real kids, sequential parents return 0, errors are -1
 				waitpid(kids[i],NULL,0);
 			}
 		}
