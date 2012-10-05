@@ -347,7 +347,7 @@ int main(int argc, char **argv){
 		char temp_m;
 		int j;
 		_Bool will_exit = 0;
-		char *temp_s;
+		char *temp_s; //to store commands for output prettyness
 		pid_t p;
 		for(;clean_cmd_arr[i]!=NULL;i++)  //i < length of clean_cmd_array
 		{
@@ -357,15 +357,6 @@ int main(int argc, char **argv){
 
 			if(cmd[0]==NULL){
 				printf("Execution failed, no input\n");
-			}else if(0==strcmp(cmd[0],"background")){ //easier to mess with background implementation
-				if(1==stage2){
-					printf("Background jobs OFF\n");
-					stage2 = 0;
-				}
-				else{
-					printf("Background jobs ON\n");
-					stage2 = 1; //1 means yes for stage2
-				}
 			}else if(0==strcmp(cmd[0],"exit")){ //exit command given
 				if(1==stage2){
 					if(kids!=NULL){
@@ -430,14 +421,22 @@ int main(int argc, char **argv){
 					mode=temp_m;
 				}else
 				{
-					temp_s = strdup(cmd[0]);
+					temp_s=malloc(sizeof(char)*buffer_len);
+					strcpy(temp_s,cmd[0]);
+
+					j = 1;
+					while(cmd[j]!=NULL){ //one unbroken sentence rather than a set of strings
+						strcat(temp_s," ");
+						strcat(temp_s,cmd[j]);
+						j++;
+					}
 					if(0==testCmdReal(&cmd[0],paths,buffer_len)){ //stat failed, no file
 						printf("Execution of %s failed, invalid file\n",temp_s);
 					}else
 					{
 						p = execCmd(cmd, mode); //p>0 if a child is still alive at the end of execCmd
 						if(p>0){ //only add living (to our knowledge) children to the linked list
-							insert(temp_s,p, &kids);
+							insert(temp_s,p, &kids); //temp_s stores the whole command line, including modifiers
 						}				
 					}
 					free(temp_s);
@@ -460,7 +459,6 @@ int main(int argc, char **argv){
 				copy = copy->next;
 				killNode(tmp,&kids); //removes node of dead child
 			}
-			free(copy);
 		}
 		free(clean_cmd_arr);
 
@@ -486,7 +484,6 @@ int main(int argc, char **argv){
 				copy=copy->next;
 				killNode(tmp,&deadkids);
 			}
-			free(copy);
 		}
 		printf("%s", prompt);
 		fflush(stdout);
