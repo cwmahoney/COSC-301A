@@ -8,6 +8,8 @@
 
 //Favorite test case: mode p;/bin/ls;;;asfdasdf  ;;asdf  ;; sfd; /sdf.' ;/bin/sleep 5;/bin/echo done;mode s;/bin/sleep 5;/bin/ls;exit
 
+//Still need to clean up finished processes, do polling
+
 /* you probably won't need any other header files for this project */
 #include <stdio.h>
 #include <stdlib.h>
@@ -40,19 +42,23 @@ void killComments(char *input,int len){
 // Linked list implementation
 struct node {
     pid_t proc;
+	char *cmd;
+	int run;
     struct node *next; 
 	struct node *last; //need it for removal without stupidity
 };
 
-void insert(pid_t proc_id, struct node **head) {
+void insert(char *cmd, pid_t proc_id, struct node **head) {
     struct node *newnode = malloc(sizeof(struct node));
 	newnode->last = NULL;
+	newnode->run = 1; //starts off running
     newnode->next = *head;
 	if(*head!=NULL){
 		(*head)->last = newnode;
 	}
 
 	newnode->proc = proc_id;
+	newnode->cmd = strdup(cmd);
     *head = newnode;
 }
 
@@ -61,6 +67,7 @@ void clear_list(struct node *curnode) {
 	while (curnode != NULL) {
 		tmp = curnode;
 		curnode = curnode->next;
+		free(tmp->cmd);
 		free(tmp);
 	}
 }
@@ -83,6 +90,7 @@ void killNode(struct node *curnode, struct node **head){ //Curt's --still no goo
 		tmp = curnode->last;
 		tmp->next=NULL;
 	}
+	free(curnode->cmd);
 	free(curnode);
 }
 
@@ -272,6 +280,20 @@ int testCmdReal(char **instr,char **paths, int max_len){
 	return 0; //no valid path found
 }
 
+void printProcs(struct node *head){
+	struct node *copy = head;
+	char *running;
+	while(copy!=NULL){
+		if(1==copy->run){
+			running = "Running";
+		}else{
+			running = "Paused";
+		}
+		printf("PID: %d\tCommand: %s\tState: %s\n",copy->proc,copy->cmd,running);
+		copy=copy->next;
+	}
+}
+
 //Need to deal with string-literal input, parallel vs. sequential, user vs. kernal time, EOF-checkery
 int main(int argc, char **argv){
     char *prompt = "CMAS> ";
@@ -285,8 +307,12 @@ int main(int argc, char **argv){
 
 	struct node *kids = NULL; //for tracking running processes
 	char **paths = buildPaths();
-	struct node *copy = kids; //start at head of list
+	struct node *copy; //start at head of list
 	struct node *tmp;
+
+	struct node *deadkids = NULL; //for tracking completed processes that haven't been output yet
+
+	int stage2 = 1; //"bool" for Stage 2, not waiting for parallels to finish before prompting
 
     while (fgets(buffer, buffer_len, stdin) != NULL) { //works as an EOF checker, according to Prof.
         /* process current command line in buffer */
@@ -321,14 +347,82 @@ int main(int argc, char **argv){
 		char temp_m;
 		int j;
 		_Bool will_exit = 0;
+		char *temp_s;
 		pid_t p;
 		for(;clean_cmd_arr[i]!=NULL;i++)  //i < length of clean_cmd_array
 		{
 			cmd = clean_cmd_arr[i];
 			printf("Command: _%s_\n",cmd[0]);
+				
 
-			if(0==strcmp(cmd[0],"exit")){ //exit command given
-				will_exit = 1; //will exit later
+			if(cmd[0]==NULL){
+				printf("Execution failed, no input\n");
+			}else if(0==strcmp(cmd[0],"background")){ //easier to mess with background implementation
+				if(1==stage2){
+					printf("Background jobs OFF\n");
+					stage2 = 0;
+				}
+				else{
+					printf("Background jobs ON\n");
+					stage2 = 1; //1 means yes for stage2
+				}
+			}else if(0==strcmp(cmd[0],"exit")){ //exit command given
+				if(1==stage2){
+					if(kids!=NULL){
+						printf("Cannot EXIT, jobs running in background\n");
+					}
+					else{
+						will_exit = 1;
+					}
+				}else{
+					will_exit = 1; //will exit later in stage 1
+				}
+			}else if(0==strcmp(cmd[0],"jobs")){
+				printProcs(kids);
+			}else if((0==strcmp(cmd[0],"pause"))&&(cmd[0]!=NULL)){
+				int pid = strtol(cmd[1],NULL,10);
+
+				if(0==kill(strtol(cmd[1],NULL,10), SIGSTOP)){ //cast as pointer, 0 means success
+					copy = kids;
+					while(copy!=NULL){
+						if(copy->proc==pid){
+							copy->run=0; //not running any more
+							break;
+						}
+					}
+				}else{
+					printf("Pause failed: ");
+					if(errno==EINVAL){
+						printf("Invalid signal number"); //never be tripped, I don't think
+					}else if(errno==EPERM){
+						printf("Insuficient permissions");
+					}else{ //ESRCH
+						printf("Invalid PID");
+					}
+					printf("\n");
+				}
+			}else if((0==strcmp(cmd[0],"resume"))&&(cmd[1]!=NULL)){
+				int pid = strtol(cmd[1],NULL,10);
+
+				if(0==kill(pid, SIGCONT)){ //cast as pointer, 0 means success
+					copy = kids;
+					while(copy!=NULL){ //know that it's one of these guys
+						if(copy->proc==pid){
+							copy->run=1; //running again
+							break;
+						}
+					}
+				}else{
+					printf("Resume failed: ");
+					if(errno==EINVAL){
+						printf("Invalid signal number"); //never be tripped, I don't think
+					}else if(errno==EPERM){
+						printf("Insuficient permissions");
+					}else{ //ESRCH
+						printf("Invalid PID");
+					}
+					printf("\n");
+				}
 			}else
 			{ //mode checking
 				temp_m = modeCheck(cmd,mode);
@@ -336,15 +430,17 @@ int main(int argc, char **argv){
 					mode=temp_m;
 				}else
 				{
-					if((cmd[0]==NULL)||(0==testCmdReal(&cmd[0],paths,buffer_len))){ //returns a 0 or 1, changes cmd[0] if real command
-						printf("Execution of %s failed, invalid file\n",cmd[0]);
+					temp_s = strdup(cmd[0]);
+					if(0==testCmdReal(&cmd[0],paths,buffer_len)){ //stat failed, no file
+						printf("Execution of %s failed, invalid file\n",temp_s);
 					}else
 					{
 						p = execCmd(cmd, mode); //p>0 if a child is still alive at the end of execCmd
 						if(p>0){ //only add living (to our knowledge) children to the linked list
-							insert(p, &kids);
-						}						
+							insert(temp_s,p, &kids);
+						}				
 					}
+					free(temp_s);
 				}
 			}
 
@@ -355,25 +451,8 @@ int main(int argc, char **argv){
 			free(clean_cmd_arr[i]);
 		}
 		//after all commands executed
-	
-		copy = kids; //start at head of list
-		while (copy != NULL){
-			waitpid(copy->proc, NULL, 0);
-			tmp=copy;
-			copy = copy->next;
-			killNode(tmp,&kids); //removes node of dead child
-		}
-		free(copy);
-		free(clean_cmd_arr);
 
-		if(will_exit){//finished commands and exit given at some point
-			struct rusage usage_self, usage_children;
-			getrusage(RUSAGE_SELF, &usage_self);
-			getrusage(RUSAGE_CHILDREN, &usage_children);
-			printf("%ld.%06ld seconds spent in user mode\n", usage_self.ru_utime.tv_sec + usage_children.ru_utime.tv_sec, usage_self.ru_utime.tv_usec + usage_children.ru_utime.tv_usec);
-			printf("%ld.%06ld seconds spent in kernel mode\n", usage_self.ru_stime.tv_sec + usage_children.ru_stime.tv_sec, usage_self.ru_stime.tv_usec + usage_children.ru_stime.tv_usec);
-
-			//waiting for all instructions to finish
+		if(stage2==0){	//Stage 1 functionality
 			copy = kids; //start at head of list
 			while (copy != NULL){
 				waitpid(copy->proc, NULL, 0);
@@ -381,17 +460,42 @@ int main(int argc, char **argv){
 				copy = copy->next;
 				killNode(tmp,&kids); //removes node of dead child
 			}
-		free(copy);
-		
-			break; //leave while-loop
+			free(copy);
+		}
+		free(clean_cmd_arr);
+
+		if(will_exit){//finished commands and exit given at some point
+			if(kids!=NULL){ //in stage 2 and kids were created after an exit command, on the same input line
+				printf("Jobs started after EXIT command, EXIT failed\n");
+			}
+			else{
+				struct rusage usage_self, usage_children;
+				getrusage(RUSAGE_SELF, &usage_self);
+				getrusage(RUSAGE_CHILDREN, &usage_children);
+				printf("%ld.%06ld seconds spent in user mode\n", usage_self.ru_utime.tv_sec + usage_children.ru_utime.tv_sec, usage_self.ru_utime.tv_usec + usage_children.ru_utime.tv_usec);
+				printf("%ld.%06ld seconds spent in kernel mode\n", usage_self.ru_stime.tv_sec + usage_children.ru_stime.tv_sec, usage_self.ru_stime.tv_usec + usage_children.ru_stime.tv_usec);
+				break; //leave while-loop
+			}
+		}
+
+		if(stage2==1){ //S2, printing processes that recently finished.
+			copy = deadkids;
+			while(copy!=NULL){
+				printf("ARGHSADKFJAS LProcess %d (%s) completed\n",copy->proc,copy->cmd);
+				tmp=copy;
+				copy=copy->next;
+				killNode(tmp,&deadkids);
+			}
+			free(copy);
 		}
 		printf("%s", prompt);
 		fflush(stdout);
 		//printf("TESTING\n");
     }
-	clear_list(kids);
+	clear_list(kids); //only really needed for EOF where we don't wait for stuff to finish in a polite manner
 	int k = 0;
-	for(;k<arrLen(paths);k++){
+
+	for(;k<arrLen(paths);k++){ //clearing path array
 		free(paths[k]);
 	}
 	free(paths);
