@@ -1,14 +1,14 @@
+
 /*
  * project 1 (shell) main.c template 
  *
  * Curtis Mahoney, Adriana Sperlea
- * -Curt worked on the backbone code, borrowing Adriana's functioning tokenify and implementing all Stage 1 functionality besides implementation of CPU time.
+ * -Curt worked on the backbone code, borrowing Adriana's functioning tokenify and implementing all Stage 1 functionality besides implementation of CPU time and a basic linked list.
+ * - Curt also implemented all Stage 2 functionality, including adding extra parameters and functions for linked lists
  *
  */
 
 //Favorite test case: mode p;/bin/ls;;;asfdasdf  ;;asdf  ;; sfd; /sdf.' ;/bin/sleep 5;/bin/echo done;mode s;/bin/sleep 5;/bin/ls;exit
-
-//Still need to clean up finished processes, do polling
 
 /* you probably won't need any other header files for this project */
 #include <stdio.h>
@@ -26,6 +26,7 @@
 #include <errno.h>
 #include <assert.h>
 
+/*Turns the first comment character '#' into and end string char*/
 void killComments(char *input,int len){
 	int i = 0;
 	while(input[i]!='\0'){
@@ -62,6 +63,7 @@ void insert(char *cmd, pid_t proc_id, struct node **head) {
     *head = newnode;
 }
 
+/*Wipes out the entire list after curnode*/
 void clear_list(struct node *curnode) {
 	struct node *tmp;
 	while (curnode != NULL) {
@@ -72,6 +74,7 @@ void clear_list(struct node *curnode) {
 	}
 }
 
+/*removes a node from the ll starting at head*/
 void killNode(struct node *curnode, struct node **head){ //Curt's --still no good - mode p \n ls;ls;sleep 2;ls;mode s; ls
 	struct node *tmp = curnode->last;
 
@@ -132,7 +135,7 @@ char** tokenify(char *s, const char delim[]) //Adriana's code, slightly modified
 	return result;
 }
 
-/*Returns length of an array ending with a NULL in it's last index, regardless of array type*/
+/*Return length of an array ending with a NULL in it's last index, for char ** (arrLen) and char *** (arrLen2)*/
 int arrLen(char **inarr){ //have to have different types anyway, for ** and ***, so might as well not get yelled at by the compiler
 	int i = 0;
 	while(inarr[i++]!=NULL){
@@ -148,7 +151,7 @@ int arrLen2(char ***inarr){
 	return i;
 }
 
-/*Returns malloced array of strings formatted {<command>,<arg0>, <arg1>,...} if a valid input or just NULL otherwise*/
+/*Returns malloced array of strings formatted {<command>,<arg0>, <arg1>,...,NULL} if a valid input or just NULL otherwise*/
 char **breakCommand(char *instr){
 	if(instr==NULL){
 		return NULL;
@@ -194,6 +197,8 @@ pid_t execCmd(char **cmd, char mode){
 	return p;
 }
 
+
+/*Checks command array for a mode switch order, the returns mode to switch to/stay in (if mode order exists) or 'n' otherwise, indicating that no mode command is in the cmd*/
 char modeCheck(char **cmd, char mode){
 	if(!strcmp(cmd[0],"mode")){ //mode command given
 		if(cmd[1]==NULL){ //nothing trailing
@@ -208,7 +213,7 @@ char modeCheck(char **cmd, char mode){
 		}
 
 		if((0==strcmp(cmd[1],"p"))||(0==strcmp(cmd[1],"parallel"))){
-			if(mode=='s'){ //bool == 1 means sequential
+			if(mode=='s'){ //s means sequential
 				printf("Switched to PARALLEL mode\n");
 				return('p');
 			}
@@ -216,7 +221,7 @@ char modeCheck(char **cmd, char mode){
 				printf("Already in PARALLEL mode\n");
 			}
 		}else if((0==strcmp(cmd[1],"s"))||(0==strcmp(cmd[1],"sequential"))){
-			if(mode=='p'){ //bool == 0 means parallel
+			if(mode=='p'){ //p means parallel
 				printf("Switched to SEQUENTIAL mode\n");
 				return('s');
 			}
@@ -254,6 +259,7 @@ char **buildPaths(){
 	
 }
 
+/*See if there's a valid file at the end of some path*/
 int testCmdReal(char **instr,char **paths, int max_len){
 	char temp_c[max_len*2]; //covers all string lens possible
 	int i = 0;
@@ -280,6 +286,7 @@ int testCmdReal(char **instr,char **paths, int max_len){
 	return 0; //no valid path found
 }
 
+/*Print off all running processes*/
 void printProcs(struct node *head){
 	struct node *copy = head;
 	char *running;
@@ -294,26 +301,27 @@ void printProcs(struct node *head){
 	}
 }
 
-//Need to deal with string-literal input, parallel vs. sequential, user vs. kernal time, EOF-checkery
 int main(int argc, char **argv){
     char *prompt = "CMAS> ";
     printf("%s", prompt);
     fflush(stdout);
+
 	const int buffer_len=1024;
     char *buffer=malloc(sizeof(char *)*buffer_len);
 	buffer[0]='\0'; //initial value
 	char **cmd_arr;
-	char mode = 's'; //Mode "bit." 's' means sequential
-
-	struct node *kids = NULL; //for tracking running processes
-	char **paths = buildPaths();
-	struct node *copy; //start at head of list
-	struct node *tmp;
-
-	struct node *deadkids = NULL; //for tracking completed processes that haven't been output yet
-
+	char mode = 's'; //Mode "bit" - 's' means sequential
 	int stage2 = 1; //"bool" for Stage 2 (1 if stage 2 active), not waiting for parallels to finish before prompting
+	char **paths = buildPaths(); //paths to check if a file could be in
 
+	//linked lists for active and dead processes
+	struct node *kids = NULL; //for tracking running processes
+	struct node *deadkids = NULL; //for tracking completed processes that haven't been output yet	
+
+	//just declaring some temporary vars for later use
+	struct node *copy;
+	struct node *tmp;
+	
     while (fgets(buffer, buffer_len, stdin) != NULL) { //works as an EOF checker, according to Prof.
         /* process current command line in buffer */
 
@@ -342,20 +350,20 @@ int main(int argc, char **argv){
         
         //char *cmd[] = { "/bin/ls", "-l","-t", "-r", ".", NULL };
 
+		//temporary variables. I don't like declaring new vars several times
 		i=0;
 		char **cmd;
 		char temp_m;
 		int j;
-		_Bool will_exit = 0;
+		_Bool will_exit = 0; //if on, will try to exit at the end of the instructions
 		char *temp_s; //to store commands for output prettyness
 		pid_t p;
 		for(;clean_cmd_arr[i]!=NULL;i++)  //i < length of clean_cmd_array
 		{
 			cmd = clean_cmd_arr[i];
-			printf("Command: _%s_\n",cmd[0]);
-				
+			printf("Command: _%s_\n",cmd[0]); //testing				
 
-			if(cmd[0]==NULL){
+			if(cmd[0]==NULL){ //no string, I don't think this can happen, but better safe
 				printf("Execution failed, no input\n");
 			}else if(0==strcmp(cmd[0],"exit")){ //exit command given
 				if(1==stage2){
@@ -363,19 +371,19 @@ int main(int argc, char **argv){
 						printf("Cannot EXIT, jobs running in background\n");
 					}
 					else{
-						will_exit = 1;
+						will_exit = 1; //will try to exit later in stage2
 					}
 				}else{
 					will_exit = 1; //will exit later in stage 1
 				}
-			}else if(0==strcmp(cmd[0],"jobs")){
+			}else if(0==strcmp(cmd[0],"jobs")){ //print out running (to our knowledge) jobs
 				printProcs(kids);
-			}else if((0==strcmp(cmd[0],"pause"))&&(cmd[0]!=NULL)){
+			}else if((0==strcmp(cmd[0],"pause"))&&(cmd[0]!=NULL)){ //pausing and resuming processes
 				int pid = strtol(cmd[1],NULL,10);
 
 				if(0==kill(strtol(cmd[1],NULL,10), SIGSTOP)){ //cast as pointer, 0 means success
 					copy = kids;
-					while(copy!=NULL){
+					while(copy!=NULL){ //run through the whole list to find it, if necessary. O(n).
 						if(copy->proc==pid){
 							copy->run=0; //not running any more
 							break;
@@ -421,7 +429,7 @@ int main(int argc, char **argv){
 					mode=temp_m;
 				}else
 				{
-					temp_s=malloc(sizeof(char)*buffer_len);
+					temp_s=malloc(sizeof(char)*buffer_len); //allocate for the whole command line, not jsut the first word
 					strcpy(temp_s,cmd[0]);
 
 					j = 1;
@@ -444,7 +452,7 @@ int main(int argc, char **argv){
 			}
 
 			j=0;
-			for(;j<arrLen(clean_cmd_arr[i]);j++){
+			for(;j<arrLen(clean_cmd_arr[i]);j++){ //free all of cmd
 				free(clean_cmd_arr[i][j]);
 			}
 			free(clean_cmd_arr[i]);
@@ -467,7 +475,7 @@ int main(int argc, char **argv){
 				printf("Jobs started after EXIT command, EXIT failed\n");
 			}
 			else{
-				struct rusage usage_self, usage_children;
+				struct rusage usage_self, usage_children; //print off CPU usage
 				getrusage(RUSAGE_SELF, &usage_self);
 				getrusage(RUSAGE_CHILDREN, &usage_children);
 				printf("%ld.%06ld seconds spent in user mode\n", usage_self.ru_utime.tv_sec + usage_children.ru_utime.tv_sec, usage_self.ru_utime.tv_usec + usage_children.ru_utime.tv_usec);
@@ -528,6 +536,7 @@ int main(int argc, char **argv){
 			}
 		}
     }
+	//out of all loops, about to return
 	clear_list(kids); //only really needed for EOF where we don't wait for stuff to finish in a polite manner
 	int k = 0;
 
