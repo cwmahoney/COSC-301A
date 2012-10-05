@@ -312,7 +312,7 @@ int main(int argc, char **argv){
 
 	struct node *deadkids = NULL; //for tracking completed processes that haven't been output yet
 
-	int stage2 = 1; //"bool" for Stage 2, not waiting for parallels to finish before prompting
+	int stage2 = 1; //"bool" for Stage 2 (1 if stage 2 active), not waiting for parallels to finish before prompting
 
     while (fgets(buffer, buffer_len, stdin) != NULL) { //works as an EOF checker, according to Prof.
         /* process current command line in buffer */
@@ -431,7 +431,7 @@ int main(int argc, char **argv){
 						j++;
 					}
 					if(0==testCmdReal(&cmd[0],paths,buffer_len)){ //stat failed, no file
-						printf("Execution of %s failed, invalid file\n",temp_s);
+						printf("Execution of \"%s\" failed, invalid file\n",temp_s);
 					}else
 					{
 						p = execCmd(cmd, mode); //p>0 if a child is still alive at the end of execCmd
@@ -448,8 +448,8 @@ int main(int argc, char **argv){
 				free(clean_cmd_arr[i][j]);
 			}
 			free(clean_cmd_arr[i]);
-		}
-		//after all commands executed
+		}//after all commands executed		
+		free(clean_cmd_arr);
 
 		if(stage2==0){	//Stage 1 functionality
 			copy = kids; //start at head of list
@@ -460,7 +460,7 @@ int main(int argc, char **argv){
 				killNode(tmp,&kids); //removes node of dead child
 			}
 		}
-		free(clean_cmd_arr);
+
 
 		if(will_exit){//finished commands and exit given at some point
 			if(kids!=NULL){ //in stage 2 and kids were created after an exit command, on the same input line
@@ -472,22 +472,61 @@ int main(int argc, char **argv){
 				getrusage(RUSAGE_CHILDREN, &usage_children);
 				printf("%ld.%06ld seconds spent in user mode\n", usage_self.ru_utime.tv_sec + usage_children.ru_utime.tv_sec, usage_self.ru_utime.tv_usec + usage_children.ru_utime.tv_usec);
 				printf("%ld.%06ld seconds spent in kernel mode\n", usage_self.ru_stime.tv_sec + usage_children.ru_stime.tv_sec, usage_self.ru_stime.tv_usec + usage_children.ru_stime.tv_usec);
+
 				break; //leave while-loop
 			}
 		}
 
-		if(stage2==1){ //S2, printing processes that recently finished.
-			copy = deadkids;
-			while(copy!=NULL){
-				printf("ARGHSADKFJAS LProcess %d (%s) completed\n",copy->proc,copy->cmd);
-				tmp=copy;
-				copy=copy->next;
-				killNode(tmp,&deadkids);
+		printf("%s", prompt); //only initial prompt for stage 2, the only prompt for stage 1
+		fflush(stdout);
+
+		if(stage2==1){ //in stage 2			
+			while (1) //stolen from piazza
+			{
+				struct pollfd pfd = { 0, POLLIN }; // file descriptor is 0, I want to know when there are "IN" events pending
+				int rv = poll(&pfd, 1, 1000); // wait for an input event for 1000 miliseconds (1 sec).
+				if (rv == 0) {
+					copy = kids;
+					int rstatus;
+					while(copy!=NULL){
+						rstatus = 0;
+						waitpid(copy->proc,&rstatus,WNOHANG); //doesn't HANG around, just checks status
+						if(WIFEXITED(rstatus)){ //process has exited
+							insert(copy->cmd,copy->proc,&deadkids); //put in dead kids linked list to be printed out later
+							tmp=copy;
+							copy=copy->next;
+							killNode(tmp,&kids); //remove exited processes from kids list
+						}
+					}
+					//printing processes that recently finished before we give the prompt
+					tmp=NULL;
+					copy = deadkids;
+					while(copy!=NULL){
+						printf("Process %d (%s) completed\n",copy->proc,copy->cmd);
+						tmp=copy;
+						copy=copy->next;
+						killNode(tmp,&deadkids);
+					}
+					if(tmp!=NULL){ //at least one process finished, was reported on
+						printf("%s", prompt); //re-prompt after printing out finished processes
+						fflush(stdout);
+					}
+				} else if (rv < 0) {
+					printf("Polling Error\n");
+					printf("%s", prompt);
+					fflush(stdout);
+					break;
+					// some kind of error happened with poll.  this is probably bad and we
+					// probably want to break out of the while loop
+				} else {
+					break; //will lead to top-level while-loop being evaluated
+
+					// user must have typed something (rv would be 1 in this case, since there's only 1
+					// file descriptor we registered to detect events on)
+					// time to call fgets to get what the user typed.
+				}
 			}
 		}
-		printf("%s", prompt);
-		fflush(stdout);
-		//printf("TESTING\n");
     }
 	clear_list(kids); //only really needed for EOF where we don't wait for stuff to finish in a polite manner
 	int k = 0;
