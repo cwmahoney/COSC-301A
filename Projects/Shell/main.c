@@ -65,7 +65,7 @@ void clear_list(struct node *curnode) {
 	}
 }
 
-void killNode(struct node *curnode, struct node **head){ //Curt's //still no good - mode p \n ls;ls;sleep 2;ls;mode s; ls
+void killNode(struct node *curnode, struct node **head){ //Curt's --still no good - mode p \n ls;ls;sleep 2;ls;mode s; ls
 	struct node *tmp = curnode->last;
 
 	if(*head==curnode){ //curnode is head
@@ -73,6 +73,8 @@ void killNode(struct node *curnode, struct node **head){ //Curt's //still no goo
 		if(tmp!=NULL){	 //head is not alone		
 			tmp->last=NULL;
 			*head=tmp;
+		}else{
+			*head = NULL; //entire list is empty now
 		}
 	}else if(curnode->next!=NULL){ //curnode is in middle somewhere
 		tmp->next = curnode->next;
@@ -259,7 +261,7 @@ int testCmdReal(char **instr,char **paths, int max_len){
 	for(;i<arrLen(paths)-1;i++){
 		strcpy(temp_c,paths[i]);
 		strcat(temp_c,*instr);	
-		printf("TESTING _%s_\n",temp_c);
+		//printf("TESTING _%s_\n",temp_c);
 		rv = stat(temp_c, &statresult );
 		if(rv>=0){ //stat succeeded
 			free(*instr);
@@ -282,7 +284,9 @@ int main(int argc, char **argv){
 	char mode = 's'; //Mode "bit." 's' means sequential
 
 	struct node *kids = NULL; //for tracking running processes
-	char **paths = buildPaths();		
+	char **paths = buildPaths();
+	struct node *copy = kids; //start at head of list
+	struct node *tmp;
 
     while (fgets(buffer, buffer_len, stdin) != NULL) { //works as an EOF checker, according to Prof.
         /* process current command line in buffer */
@@ -352,8 +356,7 @@ int main(int argc, char **argv){
 		}
 		//after all commands executed
 	
-		struct node *copy = kids; //start at head of list
-		struct node *tmp;
+		copy = kids; //start at head of list
 		while (copy != NULL){
 			waitpid(copy->proc, NULL, 0);
 			tmp=copy;
@@ -369,6 +372,16 @@ int main(int argc, char **argv){
 			getrusage(RUSAGE_CHILDREN, &usage_children);
 			printf("%ld.%06ld seconds spent in user mode\n", usage_self.ru_utime.tv_sec + usage_children.ru_utime.tv_sec, usage_self.ru_utime.tv_usec + usage_children.ru_utime.tv_usec);
 			printf("%ld.%06ld seconds spent in kernel mode\n", usage_self.ru_stime.tv_sec + usage_children.ru_stime.tv_sec, usage_self.ru_stime.tv_usec + usage_children.ru_stime.tv_usec);
+
+			//waiting for all instructions to finish
+			copy = kids; //start at head of list
+			while (copy != NULL){
+				waitpid(copy->proc, NULL, 0);
+				tmp=copy;
+				copy = copy->next;
+				killNode(tmp,&kids); //removes node of dead child
+			}
+		free(copy);
 		
 			break; //leave while-loop
 		}
