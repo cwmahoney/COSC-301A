@@ -496,14 +496,18 @@ int main(int argc, char **argv){
 				if (rv == 0) {
 					copy = kids;
 					int rstatus;
+					int pstatus;
 					while(copy!=NULL){
 						rstatus = 0;
-						waitpid(copy->proc,&rstatus,WNOHANG); //doesn't HANG around, just checks status
-						if(WIFEXITED(rstatus)){ //process has exited
-							insert(copy->cmd,copy->proc,&deadkids); //put in dead kids linked list to be printed out later
-							tmp=copy;
-							copy=copy->next;
-							killNode(tmp,&kids); //remove exited processes from kids list
+						pstatus = waitpid(copy->proc,&rstatus,WNOHANG); //doesn't HANG around, just checks status
+						tmp=copy;
+						copy=copy->next;
+						if(pstatus>0){ //information found on process
+							if(WIFEXITED(rstatus)){ //process exited
+								printf("PSTATus: %d\n",pstatus);
+								insert(tmp->cmd,tmp->proc,&deadkids); //put in dead kids linked list to be printed out later
+								killNode(tmp,&kids); //remove exited processes from kids list
+							}
 						}
 					}
 					//printing processes that recently finished before we give the prompt
