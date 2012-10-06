@@ -1,23 +1,7 @@
 //From lab01
-/*
-#include <stdlib.h>
-#include <string.h>*/
 
-
-#include <stdio.h>
 #include <stdlib.h>
-#include <unistd.h>
-#include <fcntl.h>
 #include <string.h>
-#include <ctype.h>
-#include <sys/resource.h>
-#include <sys/wait.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <poll.h>
-#include <signal.h>
-#include <errno.h>
-#include <assert.h>
 
 // Linked list implementation
 struct node {
@@ -25,7 +9,7 @@ struct node {
 	char *cmd;
 	int run;
     struct node *next; 
-	struct node *last; //need it for removal without stupidity
+	struct node *last; //need it for removal of arbitrary nodes without O(n) cost
 };
 
 void insert(char *cmd, pid_t proc_id, struct node **head) {
