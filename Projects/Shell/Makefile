@@ -1,4 +1,4 @@
-# Makefile template for CMAS shell
+# Makefile for CMAS shell
 
 CC = gcc
 CFLAGS = -g -Wall
