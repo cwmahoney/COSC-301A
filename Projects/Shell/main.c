@@ -465,6 +465,3 @@ int main(int argc, char **argv){
 
     return 0;
 }
-
-//ls;ls;ps;ps;exit;psadf;os;ls;sleep 10
-
