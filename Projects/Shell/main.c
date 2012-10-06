@@ -176,7 +176,7 @@ struct node *buildPaths(){
 	
 }
 
-/*See if there's a valid file at the end of some path*/
+/*See if there's a valid file at the end of some path, appends correct path to beginning of instr if it exists*/
 int testCmdReal(char **instr,struct node *paths, int max_len){
 	char temp_c[max_len*2]; //covers all string lens possible
 
