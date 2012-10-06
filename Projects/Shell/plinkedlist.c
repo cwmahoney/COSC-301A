@@ -12,6 +12,7 @@ struct node {
 	struct node *last; //need it for removal of arbitrary nodes without O(n) cost
 };
 
+/*Inserts a new node with a command, a process id, and the address of the pointer to its head. Updates head to point to new*/
 void insert(char *cmd, pid_t proc_id, struct node **head) {
     struct node *newnode = malloc(sizeof(struct node));
 	newnode->last = NULL;
