@@ -5,9 +5,9 @@ CFLAGS = -g -Wall
 # main executable file first
 TARGET = shell
 # object files next
-OBJS = main.o
+OBJS = main.o tokenify.o plinkedlist.o
 # header files next
-DEPS = 
+DEPS = tokenify.h plinkedlist.h
 .PHONY : clean
 
 all: $(TARGET)

@@ -1,8 +1,10 @@
-
 /*
- * project 1 (shell) main.c template 
+ * project 1 (shell) main.c
  *
- * Curtis Mahoney, Adriana Sperlea
+ * 10/07/2012
+ * Purpose: Implement a shell.
+ *
+ * Authors: Curtis Mahoney, Adriana Sperlea
  * -Curt worked on the backbone code, borrowing Adriana's functioning tokenify and implementing all Stage 1 functionality besides implementation of CPU time and a basic linked list.
  * - Curt also implemented all Stage 2 functionality, including adding extra parameters and functions for linked lists
  *
@@ -26,6 +28,9 @@
 #include <errno.h>
 #include <assert.h>
 
+#include "tokenify.h" //helper functions built by us
+#include "plinkedlist.h"
+
 /*Turns the first comment character '#' into and end string char*/
 void killComments(char *input,int len){
 	int i = 0;
@@ -36,103 +41,6 @@ void killComments(char *input,int len){
 		}
 		i++;
 	}
-}
-
-//From lab01
-
-// Linked list implementation
-struct node {
-    pid_t proc;
-	char *cmd;
-	int run;
-    struct node *next; 
-	struct node *last; //need it for removal without stupidity
-};
-
-void insert(char *cmd, pid_t proc_id, struct node **head) {
-    struct node *newnode = malloc(sizeof(struct node));
-	newnode->last = NULL;
-	newnode->run = 1; //starts off running
-    newnode->next = *head;
-	if(*head!=NULL){
-		(*head)->last = newnode;
-	}
-
-	newnode->proc = proc_id;
-	newnode->cmd = strdup(cmd);
-    *head = newnode;
-}
-
-/*Wipes out the entire list after curnode*/
-void clear_list(struct node *curnode) {
-	struct node *tmp;
-	while (curnode != NULL) {
-		tmp = curnode;
-		curnode = curnode->next;
-		free(tmp->cmd);
-		free(tmp);
-	}
-}
-
-/*removes a node from the ll starting at head*/
-void killNode(struct node *curnode, struct node **head){ //Curt's --still no good - mode p \n ls;ls;sleep 2;ls;mode s; ls
-	struct node *tmp = curnode->last;
-
-	if(*head==curnode){ //curnode is head
-		tmp=curnode->next;
-		if(tmp!=NULL){	 //head is not alone		
-			tmp->last=NULL;
-			*head=tmp;
-		}else{
-			*head = NULL; //entire list is empty now
-		}
-	}else if(curnode->next!=NULL){ //curnode is in middle somewhere
-		tmp->next = curnode->next;
-		curnode->next = curnode->last;
-	}else{ //tail of list
-		tmp = curnode->last;
-		tmp->next=NULL;
-	}
-	free(curnode->cmd);
-	free(curnode);
-}
-
-
-/*Returns a malloced array of malloced strings. Double freedom necessary*/
-char** tokenify(char *s, const char delim[]) //Adriana's code, slightly modified to add strtok_r, fix string-mangling
-{
-	char *copy, *word = NULL, **result = NULL;
-	// use strtok to count how many tokens are in the string in order to be able to allocate the correct
-	// amount of memory
-	copy = strdup(s);
-	int count = 0;
-	char *temp;
-	char **saveptr = &temp;
-
-	word = strtok_r(copy, delim,saveptr);
-	while (word != NULL) {
-		count++;
-		word = strtok_r(NULL, delim,saveptr);
-	}
-	free(copy);
-
-	// allocate pointers for each token + 1 for the NULL character at the end
-	copy = strdup(s);
-	result = malloc((count + 1) * sizeof(char*));
-	word = strtok_r(copy, delim,saveptr);
-	count = 0;
-	while (word != NULL) {
-		// allocate memory for each token
-		result[count] = strdup(word); //malloc
-		word = strtok_r(NULL, delim,saveptr);
-		count++;
-	}
-	free(copy);
-
-	// add the NULL terminator
-	result[count] = NULL;
-	// return values
-	return result;
 }
 
 /*Return length of an array ending with a NULL in it's last index, for char ** (arrLen) and char *** (arrLen2)*/
@@ -161,7 +69,6 @@ char **breakCommand(char *instr){
 	while(isspace(instr[i])){ //necessary for super-trailing whitespace
 		i++;
 	}
-
 	if(instr[i]=='\0'){
 		return NULL;
 	}
@@ -243,26 +150,35 @@ char modeCheck(char **cmd, char mode){
 }
 
 /*Builds an array of all the valid paths to search, manually input by programemr*/
-char **buildPaths(){
-	char **paths = malloc(sizeof(char *)*8); //seven paths to test, then NULL
+struct node *buildPaths(){
+	struct node *paths=NULL;
+	//file reading from the internet
+	
+	FILE *fr;           //declar file printer
+	char line[80]; //read up to 79 characters of a path
+	char temp_s[81];
 
-	paths[0] = strdup("/bin/");
-	paths[1] = strdup("/usr/sbin/");
-	paths[2] = strdup("/sbin/");
-	paths[3] = strdup("/usr/local/bin/");
-	paths[4] = strdup("./");
-	paths[5] = strdup("/usr/games/");
-	paths[6] = strdup("/usr/bin/");
-	paths[7] = NULL;
+	fr = fopen ("shell-config", "rt");  //open for reading
 
-	return paths; //7 malloced strings and 1 malloced string of strings
+	while(fgets(line, 80, fr) != NULL) //80 char line, done with NULL
+	{
+		line[strcspn(line, "\n")] = '\0'; //get rid of newline
+		strcpy(temp_s,line);
+		strcat(temp_s,"/"); //throw on extra slash for ease of use later
+
+		//printf("PATH: %s\n",temp_s);
+
+		insert(temp_s,0,&paths); //hijaking linked list, pid of 0
+	}
+	fclose(fr);  // close the file
+
+	return paths; //pointer to the head of a list of "cmds" which are paths
 	
 }
 
 /*See if there's a valid file at the end of some path*/
-int testCmdReal(char **instr,char **paths, int max_len){
+int testCmdReal(char **instr,struct node *paths, int max_len){
 	char temp_c[max_len*2]; //covers all string lens possible
-	int i = 0;
 
 	struct stat statresult;
 	int rv;
@@ -272,8 +188,10 @@ int testCmdReal(char **instr,char **paths, int max_len){
 		return 1; //original command was valid
 	}
 
-	for(;i<arrLen(paths)-1;i++){
-		strcpy(temp_c,paths[i]);
+	struct node *copy = paths;
+
+	while(copy!=NULL){
+		strcpy(temp_c,copy->cmd);
 		strcat(temp_c,*instr);	
 		//printf("TESTING _%s_\n",temp_c);
 		rv = stat(temp_c, &statresult );
@@ -282,6 +200,7 @@ int testCmdReal(char **instr,char **paths, int max_len){
 			*instr=strdup(temp_c);
 			return 1; //success
 		}
+		copy=copy->next;
 	}
 	return 0; //no valid path found
 }
@@ -312,7 +231,7 @@ int main(int argc, char **argv){
 	char **cmd_arr;
 	char mode = 's'; //Mode "bit" - 's' means sequential
 	int stage2 = 1; //"bool" for Stage 2 (1 if stage 2 active), not waiting for parallels to finish before prompting
-	char **paths = buildPaths(); //paths to check if a file could be in
+	struct node *paths = buildPaths(); //paths to check if a file could be in
 
 	//linked lists for active and dead processes
 	struct node *kids = NULL; //for tracking running processes
@@ -350,18 +269,18 @@ int main(int argc, char **argv){
         
         //char *cmd[] = { "/bin/ls", "-l","-t", "-r", ".", NULL };
 
-		//temporary variables. I don't like declaring new vars several times
+		//temporary variables. Curt don't like declaring new vars several times
 		i=0;
 		char **cmd;
 		char temp_m;
 		int j;
 		_Bool will_exit = 0; //if on, will try to exit at the end of the instructions
-		char *temp_s; //to store commands for output prettyness
+		char temp_s[buffer_len]; //to store commands for output prettyness
 		pid_t p;
 		for(;clean_cmd_arr[i]!=NULL;i++)  //i < length of clean_cmd_array
 		{
 			cmd = clean_cmd_arr[i];
-			printf("Command: _%s_\n",cmd[0]); //testing				
+			//printf("Command: _%s_\n",cmd[0]); //testing				
 
 			if(cmd[0]==NULL){ //no string, I don't think this can happen, but better safe
 				printf("Execution failed, no input\n");
@@ -429,8 +348,7 @@ int main(int argc, char **argv){
 					mode=temp_m;
 				}else
 				{
-					temp_s=malloc(sizeof(char)*buffer_len); //allocate for the whole command line, not jsut the first word
-					strcpy(temp_s,cmd[0]);
+					strcpy(temp_s,cmd[0]); //wipe out previous value
 
 					j = 1;
 					while(cmd[j]!=NULL){ //one unbroken sentence rather than a set of strings
@@ -447,7 +365,6 @@ int main(int argc, char **argv){
 							insert(temp_s,p, &kids); //temp_s stores the whole command line, including modifiers
 						}				
 					}
-					free(temp_s);
 				}
 			}
 
@@ -492,7 +409,7 @@ int main(int argc, char **argv){
 			while (1) //stolen from piazza
 			{
 				struct pollfd pfd = { 0, POLLIN }; // file descriptor is 0, I want to know when there are "IN" events pending
-				int rv = poll(&pfd, 1, 1000); // wait for an input event for 1000 miliseconds (1 sec).
+				int rv = poll(&pfd, 1, 250); // wait for an input event for 250 miliseconds (0.25 sec).
 				if (rv == 0) {
 					copy = kids;
 					int rstatus;
@@ -500,11 +417,11 @@ int main(int argc, char **argv){
 					while(copy!=NULL){
 						rstatus = 0;
 						pstatus = waitpid(copy->proc,&rstatus,WNOHANG); //doesn't HANG around, just checks status
+
 						tmp=copy;
 						copy=copy->next;
 						if(pstatus>0){ //information found on process
 							if(WIFEXITED(rstatus)){ //process exited
-								printf("PSTATus: %d\n",pstatus);
 								insert(tmp->cmd,tmp->proc,&deadkids); //put in dead kids linked list to be printed out later
 								killNode(tmp,&kids); //remove exited processes from kids list
 							}
@@ -542,14 +459,12 @@ int main(int argc, char **argv){
     }
 	//out of all loops, about to return
 	clear_list(kids); //only really needed for EOF where we don't wait for stuff to finish in a polite manner
-	int k = 0;
+	clear_list(paths); //clears out paths
 
-	for(;k<arrLen(paths);k++){ //clearing path array
-		free(paths[k]);
-	}
-	free(paths);
 	free(buffer);
 
     return 0;
 }
+
+//ls;ls;ps;ps;exit;psadf;os;ls;sleep 10
 
