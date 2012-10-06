@@ -376,6 +376,10 @@ int main(int argc, char **argv){
 		}//after all commands executed		
 		free(clean_cmd_arr);
 
+/*
+Note: "mode" is expressed only in whether or not execCmd() makes the parent wait initially. When it doesn't make the parent wait, then the process is thrown into the kids ll. So switching back and forth between modes mid-stream will allow processes which were started in parallel mode to continue behaving parallel. The mode "bit", then, is applied to each process as it's started and not to the program as a whole. This is a feature.
+*/
+
 		if(stage2==0){	//Stage 1 functionality
 			copy = kids; //start at head of list
 			while (copy != NULL){
