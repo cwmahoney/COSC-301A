@@ -6,8 +6,8 @@
  *
  * Authors: Curtis Mahoney, Adriana Sperlea
  * -Curt worked on the backbone code, borrowing Adriana's functioning tokenify and implementing all Stage 1 functionality besides implementation of CPU time and a basic linked list.
- * - Curt also implemented all Stage 2 functionality, including adding extra parameters and functions for linked lists
- *
+ * -Curt also implemented all Stage 2 functionality, including adding extra parameters and functions for linked lists
+ * -Adriana provided CPU time reporting and basic linked list and tokenify functionality, as well as error-checking and collaboration on methods of implementation.
  */
 
 //Favorite test case: mode p;/bin/ls;;;asfdasdf  ;;asdf  ;; sfd; /sdf.' ;/bin/sleep 5;/bin/echo done;mode s;/bin/sleep 5;/bin/ls;exit
