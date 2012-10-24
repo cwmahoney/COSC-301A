@@ -5,9 +5,11 @@
 #include <pthread.h>
 #include <string.h>
 #include <errno.h>
+#include "hlinkedlist.h"
 
 typedef struct {
-
+	struct node **table;
+	int size;	
 } hashtable_t;
 
 // create a new hashtable; parameter is a size hint

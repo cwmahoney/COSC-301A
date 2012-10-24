@@ -1,14 +1,26 @@
-#include "hash.h"
+/* Adriana Sperlea and Curtis Mahoney 10/26/2012
+Purpose: creating a threadsafe hashtable.*/
 
+#include "hash.h" //hash.h includes hlinkedlist.h
+#include <pthread.h>
+
+#define LOCK pthread_mutex_lock
+#define UNLOCK pthread_mutex_unlock
+
+extern pthread_mutex_t cmas;
 
 // create a new hashtable; parameter is a size hint
 hashtable_t *hashtable_new(int sizehint) {
-    return NULL;
+	hashtable_t *hash = malloc(sizeof(hashtable_t));
+	struct node *temp; // need to change this but sizeof was being stupid!!!
+    hash->table	= malloc(sizeof(temp) * sizehint); //allocating array of size sizehint for the linkedlists
+	hash->size = sizehint; // storing the size of the array
+	return hash;
 }
 
 // free anything allocated by the hashtable library
 void hashtable_free(hashtable_t *hashtable) {
-
+	
 }
 
 // add a new string to the hashtable
