@@ -43,8 +43,9 @@ void hashtable_free(hashtable_t *hashtable) { //assume that only one thread exec
 /*calculate proper bucket*/
 int hash_sum(const char *s, int size) //helper function
 {
-	if(s==NULL){ //looking out for weirdness
-		return -1; //Don't bother to store nulls
+	//Note: High numbers of words upset main.c, causing it to send uninitialized strings our way. There is no way to deal with that on this end.
+	if(s==NULL){
+		return -1; //Don't bother to store null pointers
 	}
 	int i = 0, sum = 0;
 	for (; i < strlen(s); i++) {
@@ -59,13 +60,13 @@ void hashtable_add(hashtable_t *hashtable, const char *s) {
 	//the hashing method we are using is summing the ASCII codes of the string
 	//adding them together and then moding by the number of buckets
 
-	
 	int index = hash_sum(s, hashtable->size);
 
 	if(index!=-1){ //actual string inputted. Ignore null pointers
 		LOCK(&(hashtable->mut_table[index])); //lock bucket
 		insert(s, &hashtable->table[index]);
 		UNLOCK(&(hashtable->mut_table[index]));
+		//Could save a few instructions in the ll by passing the mutex, but it would murder readability for very little gain.
 	}
 }
 
