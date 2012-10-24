@@ -6,8 +6,6 @@
 #include <pthread.h>
 #include "hlinkedlist.h"
 
-extern pthread_mutex_t cmas;
-
 //threading taken care of at level of hashtable buckets
 
 /*Inserts a new node with a string value at the beginning of the bucket's linked list. Updates head to point to new*/
