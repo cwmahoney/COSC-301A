@@ -1,0 +1,5 @@
+10/24/2012
+MultiThread Hashtable submission
+Worked with Adriana
+
+https://github.com/cwmahoney/COSC-301A/tree/master/Projects/MultHash
