@@ -1,5 +1,8 @@
 /* Adriana Sperlea and Curtis Mahoney 10/26/2012
-Purpose: creating a threadsafe hashtable.*/
+Purpose: creating a threadsafe hashtable.
+
+Did most of it together with single-layer thread protection, Curt modified the thread-protection to cover buckets instead of the entire hash, Adriana double checked and found the source of the now-infamous "conditional jump" error (*cough cough*).
+*/
 
 #include "hash.h" //hash.h includes hlinkedlist.h
 #include <pthread.h>

@@ -28,7 +28,7 @@ void *hasher_thread(void *v) {
 
     int i = 0;
     for (i = 0; i < values_to_add; i++) {
-        hashtable_add(args->hash, args->words[start_value + i % args->num_words]);
+        hashtable_add(args->hash, args->words[(start_value + i) % args->num_words]);
     }
     
     pthread_mutex_lock(&args->done_adding_mutex);
@@ -42,7 +42,7 @@ void *hasher_thread(void *v) {
     pthread_mutex_unlock(&args->done_adding_mutex);
     
     for (i = 0; i < values_to_add; i++) {
-        hashtable_remove(args->hash, args->words[start_value + i % args->num_words]);
+        hashtable_remove(args->hash, args->words[(start_value + i) % args->num_words]);
     }
     return NULL;
 }

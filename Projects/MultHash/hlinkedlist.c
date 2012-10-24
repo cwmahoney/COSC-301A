@@ -1,5 +1,11 @@
 //From lab01
-//Declared extern mutex variablein main.c
+//all thread protection done at higher level
+
+
+/*
+Adriana and Curt
+We did all of this together, essenitally, modifying the code from the CMAS shell.
+*/
 
 #include <stdlib.h>
 #include <string.h>
