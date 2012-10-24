@@ -29,13 +29,10 @@ hashtable_t *hashtable_new(int sizehint) { //don't need to worry about threading
 }
 
 // free anything allocated by the hashtable library
-void hashtable_free(hashtable_t *hashtable) {
+void hashtable_free(hashtable_t *hashtable) { //assume that only one thread executes this, no locking/unlocking
 	int i = 0;
 	for (; i < hashtable->size; i++) {
-		LOCK(&(hashtable->mut_table[i])); //Lock and unlock each ll in sequence, then destroy their mutex
 		clear_list(hashtable->table[i]);
-		UNLOCK(&(hashtable->mut_table[i]));
-
 		pthread_mutex_destroy (&(hashtable->mut_table[i])); //destroy mutex
 	}
 	free(hashtable->table);
@@ -65,7 +62,7 @@ void hashtable_add(hashtable_t *hashtable, const char *s) {
 	
 	int index = hash_sum(s, hashtable->size);
 
-	if(index!=-1){ //actual string inputted
+	if(index!=-1){ //actual string inputted. Ignore null pointers
 		LOCK(&(hashtable->mut_table[index])); //lock bucket
 		insert(s, &hashtable->table[index]);
 		UNLOCK(&(hashtable->mut_table[index]));
