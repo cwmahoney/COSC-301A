@@ -31,6 +31,8 @@ void *hasher_thread(void *v) {
     for (i = 0; i < values_to_add; i++) {
         hashtable_add(args->hash, args->words[start_value + i % args->num_words]);
     }
+
+	printf("TESGIN\n");
     
     pthread_mutex_lock(&args->done_adding_mutex);
     // add one to done_adding as a signal to main thread that we're done
@@ -90,7 +92,7 @@ void usage(const char *progname) {
 }
 
 int main(int argc, char **argv) {
-	pthread_mutex_init(&cmas, NULL);
+	pthread_mutex_init(&cmas,NULL);
     int num_threads = 1;
     int max_values_to_add = 10;
     int num_hash_buckets = 13;
@@ -181,6 +183,6 @@ int main(int argc, char **argv) {
     }
     free(thread_args.words);
     hashtable_free(thread_args.hash);
-    pthread_mutex_destroy(&cmas);
-	exit(0);
+	pthread_mutex_destroy(&cmas);
+    exit(0);
 }

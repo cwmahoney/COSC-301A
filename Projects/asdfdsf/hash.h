@@ -9,8 +9,7 @@
 
 typedef struct {
 	struct node **table;
-	pthread_mutex_t *mut_table; //stores mutexes for each bucket, so different parts of the hash can be accessed concurrently
-	int size;
+	int size;	
 } hashtable_t;
 
 // create a new hashtable; parameter is a size hint

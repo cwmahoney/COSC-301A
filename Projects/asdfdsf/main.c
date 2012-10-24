@@ -8,6 +8,7 @@
 #include <string.h>
 #include "hash.h"
 
+pthread_mutex_t cmas;
 
 struct args {
     hashtable_t *hash;
@@ -89,6 +90,7 @@ void usage(const char *progname) {
 }
 
 int main(int argc, char **argv) {
+	pthread_mutex_init(&cmas, NULL);
     int num_threads = 1;
     int max_values_to_add = 10;
     int num_hash_buckets = 13;
@@ -179,5 +181,6 @@ int main(int argc, char **argv) {
     }
     free(thread_args.words);
     hashtable_free(thread_args.hash);
-    exit(0);
+    pthread_mutex_destroy(&cmas);
+	exit(0);
 }

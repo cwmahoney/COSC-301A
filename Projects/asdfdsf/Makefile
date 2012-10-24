@@ -1,4 +1,4 @@
-CC = gcc
+C = gcc
 CFLAGS = -g -Wall -pthread
 # main executable file first
 TARGET = mthash

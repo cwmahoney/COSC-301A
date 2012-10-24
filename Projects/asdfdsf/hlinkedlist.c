@@ -6,36 +6,42 @@
 #include <pthread.h>
 #include "hlinkedlist.h"
 
+#define LOCK pthread_mutex_lock
+#define UNLOCK pthread_mutex_unlock
+
 extern pthread_mutex_t cmas;
 
-//threading taken care of at level of hashtable buckets
-
 /*Inserts a new node with a string value at the beginning of the bucket's linked list. Updates head to point to new*/
-void insert(const char *value, struct node **head) {
+void insert(char *value, struct node **head) {
     struct node *newnode = malloc(sizeof(struct node));
 	newnode->prev = NULL;
 	newnode->value = strdup(value);	
+	LOCK(&cmas);
 	newnode->next = *head;
 	if(*head != NULL) {
 		(*head)->prev = newnode;
 	}
 
 	*head = newnode;
+	UNLOCK(&cmas);
 }
 
 /*Wipes out the entire list after curnode*/
 void clear_list(struct node *curnode) {
 	struct node *tmp;
+	LOCK(&cmas);
 	while (curnode != NULL) {
 		tmp = curnode;
 		curnode = curnode->next;
 		free(tmp->value);
 		free(tmp);
 	}
+	UNLOCK(&cmas);
 }
 
 /*Removes a node from the ll starting at head*/
 void killNode(struct node *curnode, struct node **head) {
+	LOCK(&cmas);
 	struct node *after = curnode->next;
 	struct node *before = curnode->prev; //for ease of reading
 
@@ -54,4 +60,5 @@ void killNode(struct node *curnode, struct node **head) {
 	}
 	free(curnode->value);
 	free(curnode);
+	UNLOCK(&cmas);
 }
