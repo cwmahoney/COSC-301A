@@ -15,8 +15,6 @@ Purpose: Create the code base for a concurrent web server
 #include <sys/stat.h>
 #include <arpa/inet.h>
 
-#include <semaphore.h>
-
 #include "network.h"
 #include "wlinkedlist.h"
 
