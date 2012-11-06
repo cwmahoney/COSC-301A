@@ -43,10 +43,6 @@ void clear_list(struct node *curnode) { //not sure if we need this function
 void killHead(struct node **head_ptr, struct node **tail_ptr){
 	struct node *after = (*head_ptr)->next; //for ease of reading
 
-	if(head_node!=*head_ptr){ //"head_node" is not actually the head of the list
-		return; //don't do anything if invalid value given
-	}
-
 	if(after != NULL){ //head is not alone	
 		*head_ptr = after;
 	}else{

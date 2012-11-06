@@ -28,7 +28,7 @@ void insert(int socket, struct node **head, struct node **tail) {
 	*tail = newnode;
 }
 
-/*Wipes out the entire list after curnode*/
+/*Wipes out the entire list after curnode*//*
 void clear_list(struct node *curnode) { //not sure if we need this function
 	struct node *tmp;
 	while (curnode != NULL) {
@@ -37,7 +37,7 @@ void clear_list(struct node *curnode) { //not sure if we need this function
 		shutdown(tmp->socket, 2); //closing socket, stopping both output and input
 		free(tmp);
 	}
-}
+}*/
 
 /*Removes a node from the ll starting at head and terminating at tail*/
 void killHead(struct node **head_ptr, struct node **tail_ptr){
@@ -50,6 +50,6 @@ void killHead(struct node **head_ptr, struct node **tail_ptr){
 		*tail_ptr = NULL;
 	}
 
-	shutdown((*head_ptr)->socket, 2); //closing socket, stopping both output and input
+	//shutdown((*head_ptr)->socket, 2); //closing socket, stopping both output and input
 	free(*head_ptr);
 }
