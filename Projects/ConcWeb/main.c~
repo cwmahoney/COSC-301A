@@ -56,6 +56,8 @@ void consume_cnct(struct node **head_ptr, struct node **tail_ptr){ //working wit
 	UNLOCK(&cmas);
 	
 	//do something with the socket now that you have it
+
+	shutdown(socket, 2); //shutting down the socket at the end of use
 	sem_post(&threads); //releasing semaphore back to the wild
 }
 
