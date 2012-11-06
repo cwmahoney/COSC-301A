@@ -15,6 +15,8 @@ Purpose: Create the code base for a concurrent web server
 #include <sys/stat.h>
 #include <arpa/inet.h>
 
+#include <semaphore.h>
+
 #include "network.h"
 #include "wlinkedlist.h"
 
@@ -42,7 +44,7 @@ void usage(const char *progname) {
     exit(0);
 }
 
-void consume(struct node **head_ptr, struct node **tail_ptr){
+void consume_cnct(struct node **head_ptr, struct node **tail_ptr){ //working with sockets right now, not sure if it's right
 	//Need condition variable incase list is empty
 	LOCK(&cmas); //locked over all threads
 	while(*head_ptr==NULL){
@@ -57,7 +59,7 @@ void consume(struct node **head_ptr, struct node **tail_ptr){
 	sem_post(&threads); //releasing semaphore back to the wild
 }
 
-void produce(int socket, struct node **head_ptr, struct node **tail_ptr){ //returns int for socket
+void produce_cnct(int socket, struct node **head_ptr, struct node **tail_ptr){ //returns int for socket
 	//don't need condition variable here
 	LOCK(&cmas); //locked over all threads
 	insert(socket, head_ptr, tail_ptr);
@@ -108,9 +110,9 @@ void runserver(int numthreads, unsigned short serverport) {
             fprintf(stderr, "Got connection from %s:%d\n", inet_ntoa(client_address.sin_addr), ntohs(client_address.sin_port));
 
 			//wrong right now
-			produce(new_sock, &head, &tail); //inserting socket at end of linked list, should be its own thread now
-			consume(&head,&tail); //consuming the head of the linked list I just threw the last socket on
-			//above should both be new threads. Our "pool" of threads is an abstraction, with the reality being a continuom of creation and destruction of new threads with the linked list used by the producer/consumer functions as the only thing that lasts
+			produce_cnct(new_sock, &head, &tail); //inserting socket at end of linked list, should be its own thread now
+			consume_cnct(&head,&tail); //consuming the head of the linked list I just threw the last socket on
+			//above should both be new threads. Our "pool" of threads is an abstraction, with the reality being a continuom of creation and destruction of new threads with the linked list used by the producer/consumer functions as the only thing that lasts. OR IS IT? I don't know. That's what you're for, Adriana.
 
 			////////////////////////////////////////////////////////
 			/* You got a new connection.  Hand the connection off

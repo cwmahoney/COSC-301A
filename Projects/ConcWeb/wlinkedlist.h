@@ -1,5 +1,3 @@
-#include <sys/socket.h>
-
 struct node{
  	int socket;
     struct node *next;

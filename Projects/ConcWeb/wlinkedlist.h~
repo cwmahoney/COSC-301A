@@ -1,10 +1,10 @@
-#include <sys/socket.h>
+#include <pthread.h>
 
 struct node{
- 	int socket;
+ 	pthread_t thread;
     struct node *next;
 };
 
-void insert(int socket, struct node **head, struct node **tail);
+void insert(pthread_t thread, struct node **head, struct node **tail);
 void clear_list(struct node *curnode);
-void killHead(struct node *head_node, struct node **head_ptr, struct node **tail_ptr);
+void killHead(struct node **head_ptr, struct node **tail_ptr);
