@@ -77,7 +77,7 @@ int getrequest(int sock, char *reqbuffer, int buffsize) {
             rv = recv(sock, &buffer[buffer_left - max_buffer], buffer_left, 0);
             if (rv < 0) {
                 return -1;
-            } else if (rv > 0) {
+            } else if (rv > 0){
                 buffer_left -= rv;
                 if (strstr(buffer, separator1) || strstr(buffer,separator2)) {
                     break;

@@ -14,9 +14,10 @@ We did all of this together, essenitally, modifying the code from the CMAS shell
 //threading taken care of at level of hashtable buckets
 
 /*Inserts a new node with a string value at the end of the linked list. Updates tail to point to new; otherwise assigns both head and tail to newnode, if list was empty*/
-void insert(int socket, struct node **head, struct node **tail) {
+void insert(int socket, struct sockaddr_in client_address, struct node **head, struct node **tail) {
     struct node *newnode = malloc(sizeof(struct node));
 	newnode->socket = socket;
+	newnode->client_address = client_address;
 	newnode->next = NULL;
 
 	if(*head == NULL) { //if list empty, this is both head and tail

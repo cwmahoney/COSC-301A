@@ -24,6 +24,7 @@ Purpose: Create the code base for a concurrent web server
 #define SIGNAL pthread_cond_signal
 
 pthread_mutex_t sock_mut = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t file_mut = PTHREAD_MUTEX_INITIALIZER;
 pthread_cond_t consumer = PTHREAD_COND_INITIALIZER;
 
 // global variable; can't be avoided because
@@ -40,7 +41,7 @@ void usage(const char *progname) {
     fprintf(stderr, "\tnumber of threads is 1 by default.\n");
     exit(0);
 }
-
+/*
 int consume_cnct(struct node **head_ptr, struct node **tail_ptr){ //working with sockets right now, not sure if it's right
 	//Need condition variable incase list is empty
 	LOCK(&sock_mut); //locked over all threads
@@ -54,27 +55,119 @@ int consume_cnct(struct node **head_ptr, struct node **tail_ptr){ //working with
 	killHead(head_ptr,tail_ptr);
 	UNLOCK(&sock_mut);
 	return socket;
-}
+}*/
 
-void produce_cnct(int socket, struct node **head_ptr, struct node **tail_ptr){ //returns int for socket
+void produce_cnct(int socket, struct sockaddr_in client_address, struct node **head_ptr, struct node **tail_ptr){ //returns int for socket
 	//don't need condition variable here
 	LOCK(&sock_mut); //locked over all threads
-	insert(socket, head_ptr, tail_ptr);
+	insert(socket, client_address, head_ptr, tail_ptr);
 	UNLOCK(&sock_mut);
 	SIGNAL(&consumer); //wake up one consumer function. No need to waste time on making the others spin wait
 }
 
+void logToFile(char *buffer, char *filename, int bytes)
+{
+	// needs to be made threadsafe
+	FILE *filedesc = fopen(filename, "w");
+	fprintf(filedesc, "%s", buffer);
+	fprintf(filedesc, " %d\n", bytes);
+	fclose(filedesc);
+}
+
+char *intToString(int x)
+{
+	char *digits;
+	int len = 0, power = 1;
+	while (power < x) {
+		len ++;
+		power *= 10;
+	}
+	digits = malloc(sizeof(char) * len);
+	while (x > 0) {
+		digits[len - 1] = '0' + (x % 10);
+		len --;
+	}
+	return digits;
+}
+
 void *worker(void *v){
 	struct node ***sock_list = (struct node ***)v;
+	int bufferlen = 1024;
+	char *reqbuffer = malloc(sizeof(char) * bufferlen);
+	struct stat statresult;
+	struct node **head_ptr = sock_list[0];
+	struct node **tail_ptr = sock_list[1];
+	
 	while(still_running){
-		int socket = consume_cnct(sock_list[0],sock_list[1]);
-		if(socket==-1){ //still_running==FALSE
-			return NULL; //stock running because we're done
+		int socket;
+		struct sockaddr_in client_address;
+		LOCK(&sock_mut); //locked over all threads
+		while((*head_ptr==NULL)&&(still_running==TRUE)){
+			WAIT(&consumer,&sock_mut);
 		}
-		//STUFF!!
+		if(still_running==FALSE){
+			socket = -1;
+		}else{
+			socket = (*head_ptr)->socket;
+			client_address = (*head_ptr)->client_address;
+			killHead(head_ptr,tail_ptr);
+		}
+		UNLOCK(&sock_mut); //had to copy to here instead of its own function so I can print using client_address
 
-		shutdown(socket, 2); //shutting down the socket at the end of use
+		if(socket!=-1){ //still_running!=FALSE		
+			int success = getrequest(socket, reqbuffer, bufferlen);
+			char *final_text = malloc(sizeof(char) * 1000); // ask Prof. Sommers about size again
+			
+			if (success == 0) {
+				reqbuffer += 1; // incrementing the pointer to the buffer, in order to get rid of the '/'
+				int bytes;
+				if (stat(reqbuffer, &statresult) >= 0) { // file exists (200)
+					// opening file and reading contents
+					size_t filedesc = open(reqbuffer, O_WRONLY);
+					int nread;
+					char text[10000]; // ask Prof. Sommers tomorrow about size
+					nread = read(filedesc, text, 10000);
+					close(filedesc);
+
+					// creating log
+					// adding the HTTP message to the front
+					strcpy(final_text, HTTP_200);
+					strcat(final_text, text);
+
+					// sending data
+					bytes = senddata(socket, final_text, strlen(final_text));
+					strcpy(final_text, inet_ntoa(client_address.sin_addr));
+					char *temp = intToString(ntohs(client_address.sin_port));
+					strcat(final_text,temp);
+					free(temp);
+					strcat(final_text, "TIME");
+					strcat(final_text, "\"GET /");
+					strcat(final_text, reqbuffer);
+					strcat(final_text, "\" 200 ");
+			
+				} else { // file does not exist (404)
+					// sending data
+					bytes = senddata(socket, HTTP_404, strlen(HTTP_404));
+					strcpy(final_text, inet_ntoa(client_address.sin_addr));
+					char *temp = intToString(ntohs(client_address.sin_port));
+					strcat(final_text,temp);
+					free(temp);
+					strcat(final_text, "TIME");
+					strcat(final_text, "\"GET /");
+					strcat(final_text, reqbuffer);
+					strcat(final_text, "\" 404 ");
+				}
+				// logging to file
+				LOCK(&file_mut);
+				logToFile(final_text, "weblog.txt", bytes);
+				free(final_text);
+				UNLOCK(&file_mut);
+
+			}
+			shutdown(socket, 2); //shutting down the socket at the end of use
+		}
 	}
+	free(reqbuffer);
 	return NULL;
 }
 
@@ -127,10 +220,9 @@ void runserver(int num_threads, unsigned short serverport) {
         if (new_sock > 0) {            
             fprintf(stderr, "Got connection from %s:%d\n", inet_ntoa(client_address.sin_addr), ntohs(client_address.sin_port));
 
-			//wrong right now
-			produce_cnct(new_sock, &head, &tail); //inserting socket at end of linked list. Only executed on main thread
+			produce_cnct(new_sock, client_address, &head, &tail); //inserting socket at end of linked list. Only executed on main thread
 
-			//Idea: Have all the waiting threads in the pool and never call them explicitely, with the threads instead constantly trying to consume
+			//Idea: Have all the waiting threads in the pool and never call them explicitly, with the threads instead constantly trying to consume
 
 			////////////////////////////////////////////////////////
 			/* You got a new connection.  Hand the connection off
@@ -159,7 +251,7 @@ void runserver(int num_threads, unsigned short serverport) {
 
 
 int main(int argc, char **argv) {
-    unsigned short port = 3000;
+	unsigned short port = 3000;
     int num_threads = 1;
 
     int c;
