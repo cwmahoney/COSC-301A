@@ -68,7 +68,7 @@ void produce_cnct(int socket, struct sockaddr_in client_address, struct node **h
 void logToFile(char *buffer, char *filename, int bytes)
 {
 	// needs to be made threadsafe
-	FILE *filedesc = fopen(filename, "w");
+	FILE *filedesc = fopen(filename, "a");
 	fprintf(filedesc, "%s", buffer);
 	fprintf(filedesc, " %d\n", bytes);
 	fclose(filedesc);
@@ -76,28 +76,31 @@ void logToFile(char *buffer, char *filename, int bytes)
 
 char *intToString(int x)
 {
+	printf("x = %d\n", x);
 	char *digits;
 	int len = 0, power = 1;
 	while (power < x) {
 		len ++;
 		power *= 10;
 	}
-	digits = malloc(sizeof(char) * len);
+	digits = malloc(sizeof(char) * (len + 1));
 	while (x > 0) {
 		digits[len - 1] = '0' + (x % 10);
 		len --;
+		x /= 10;
 	}
 	return digits;
 }
 
 void *worker(void *v){
+	printf("Here\n");
 	struct node ***sock_list = (struct node ***)v;
 	int bufferlen = 1024;
 	char *reqbuffer = malloc(sizeof(char) * bufferlen);
 	struct stat statresult;
 	struct node **head_ptr = sock_list[0];
 	struct node **tail_ptr = sock_list[1];
-	
+	printf("In worker\n");
 	while(still_running){
 		int socket;
 		struct sockaddr_in client_address;
@@ -113,9 +116,10 @@ void *worker(void *v){
 			killHead(head_ptr,tail_ptr);
 		}
 		UNLOCK(&sock_mut); //had to copy to here instead of its own function so I can print using client_address
-
+		printf("Before evaluating request\n");
 		if(socket!=-1){ //still_running!=FALSE		
 			int success = getrequest(socket, reqbuffer, bufferlen);
+			printf("success = %d reqbuffer = %s bufferlen = %d\n", success, reqbuffer, bufferlen);
 			char *final_text = malloc(sizeof(char) * 1000); // ask Prof. Sommers about size again
 			
 			if (success == 0) {
@@ -126,7 +130,8 @@ void *worker(void *v){
 					size_t filedesc = open(reqbuffer, O_WRONLY);
 					int nread;
 					char text[10000]; // ask Prof. Sommers tomorrow about size
-					nread = read(filedesc, text, 10000);
+					nread = read(filedesc, text, sizeof(text));
+					printf("text = %s\n", text);
 					close(filedesc);
 
 					// creating log
@@ -135,15 +140,20 @@ void *worker(void *v){
 					strcat(final_text, text);
 
 					// sending data
+					printf("final_text = %s\n", final_text);
 					bytes = senddata(socket, final_text, strlen(final_text));
-					strcpy(final_text, inet_ntoa(client_address.sin_addr));
+					printf("bytes = %d\n", bytes);
+					strcpy(final_text, inet_ntoa(client_address.sin_addr)); // make a different variable for this for everyobody's sanity
+					printf("before %d\n", ntohs(client_address.sin_port));
 					char *temp = intToString(ntohs(client_address.sin_port));
+					printf("temp = %s\n", temp);
 					strcat(final_text,temp);
 					free(temp);
 					strcat(final_text, "TIME");
 					strcat(final_text, "\"GET /");
 					strcat(final_text, reqbuffer);
 					strcat(final_text, "\" 200 ");
+					printf("d\n");
 			
 				} else { // file does not exist (404)
 					// sending data
@@ -251,6 +261,7 @@ void runserver(int num_threads, unsigned short serverport) {
 
 
 int main(int argc, char **argv) {
+	printf("Hi, I'm in main!\n");
 	unsigned short port = 3000;
     int num_threads = 1;
 
@@ -276,7 +287,7 @@ int main(int argc, char **argv) {
                 break;
         }
     }
-
+	num_threads = 5;
     runserver(num_threads, port);
     
     fprintf(stderr, "Server done.\n");
