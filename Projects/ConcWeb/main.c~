@@ -15,8 +15,6 @@ Purpose: Create the code base for a concurrent web server
 #include <sys/stat.h>
 #include <arpa/inet.h>
 
-#include <semaphore.h>
-
 #include "network.h"
 #include "wlinkedlist.h"
 
@@ -25,9 +23,8 @@ Purpose: Create the code base for a concurrent web server
 #define WAIT pthread_cond_wait
 #define SIGNAL pthread_cond_signal
 
-pthread_mutex_t cmas = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t sock_mut = PTHREAD_MUTEX_INITIALIZER;
 pthread_cond_t consumer = PTHREAD_COND_INITIALIZER;
-sem_t threads;
 
 // global variable; can't be avoided because
 // of asynchronous signal interaction
@@ -44,44 +41,57 @@ void usage(const char *progname) {
     exit(0);
 }
 
-void consume_cnct(struct node **head_ptr, struct node **tail_ptr){ //working with sockets right now, not sure if it's right
+int consume_cnct(struct node **head_ptr, struct node **tail_ptr){ //working with sockets right now, not sure if it's right
 	//Need condition variable incase list is empty
-	LOCK(&cmas); //locked over all threads
+	LOCK(&sock_mut); //locked over all threads
 	while(*head_ptr==NULL){
-		WAIT(&consumer,&cmas);
+		WAIT(&consumer,&sock_mut);
 	}
 	int socket = (*head_ptr)->socket;
 	killHead(head_ptr,tail_ptr);
-	SIGNAL(&consumer); //wake up exactly one consumer function. No need to waste time on making the others spin wait
-	UNLOCK(&cmas);
-	
-	//do something with the socket now that you have it
-
-	shutdown(socket, 2); //shutting down the socket at the end of use
-	sem_post(&threads); //releasing semaphore back to the wild
+	UNLOCK(&sock_mut);
+	return socket;
 }
 
 void produce_cnct(int socket, struct node **head_ptr, struct node **tail_ptr){ //returns int for socket
 	//don't need condition variable here
-	LOCK(&cmas); //locked over all threads
+	LOCK(&sock_mut); //locked over all threads
 	insert(socket, head_ptr, tail_ptr);
-	UNLOCK(&cmas);
+	UNLOCK(&sock_mut);
+	SIGNAL(&consumer); //wake up one consumer function. No need to waste time on making the others spin wait
 }
 
-void runserver(int numthreads, unsigned short serverport) {
-    //////////////////////////////////////////////////
+void *worker(void *v){
+	struct node ***sock_list = (struct node ***)v;
+	while(still_running){
+		int socket = consume_cnct(sock_list[0],sock_list[1]);
 
-    // create your pool of threads here
+		//STUFF!!
 
-    //////////////////////////////////////////////////
+		shutdown(socket, 2); //shutting down the socket at the end of use
+	}
+	return NULL;
+}
 
-	//Curtiness
-	struct node *head = NULL; //consider the pool created
+void runserver(int num_threads, unsigned short serverport) {
+    struct node **sock_list[2]; //to contain pointers to head and tail for passing to threads
+	struct node *head = NULL;
 	struct node *tail = NULL;
-	sem_init(&threads, 0, numthreads); //initializing GLOBAL VARIABLE!!!!
+	sock_list[0] = &head;
+	sock_list[1] = &tail; //to pass to new threads
+
+	pthread_t threads[num_threads];
+    int i = 0;
+
+    // start up the threads; they'll start trying to consume immeidately
+    for (i = 0; i < num_threads; i++) {
+        if (0 > pthread_create(&threads[i], NULL, worker, (void*)&sock_list)) {
+            fprintf(stderr, "Error creating thread: %s\n", strerror(errno));
+        }
+    }
     
     int main_socket = prepare_server_socket(serverport);
-    if (main_socket < 0) {
+    if (main_socket < 0){
         exit(-1);
     }
     signal(SIGINT, signal_handler);
@@ -90,6 +100,9 @@ void runserver(int numthreads, unsigned short serverport) {
     socklen_t addr_len;
 
     fprintf(stderr, "Server listening on port %d.  Going into request loop.\n", serverport);
+
+
+	//thread pool set up and a-okay by now
     while (still_running) {
         struct pollfd pfd = {main_socket, POLLIN};
         int prv = poll(&pfd, 1, 10000);
@@ -106,15 +119,13 @@ void runserver(int numthreads, unsigned short serverport) {
         memset(&client_address, 0, addr_len);
 
         int new_sock = accept(main_socket, (struct sockaddr *)&client_address, &addr_len);
-        if (new_sock > 0) {
-			sem_wait(&threads); //wait until a thread is open for use
-            
+        if (new_sock > 0) {            
             fprintf(stderr, "Got connection from %s:%d\n", inet_ntoa(client_address.sin_addr), ntohs(client_address.sin_port));
 
 			//wrong right now
-			produce_cnct(new_sock, &head, &tail); //inserting socket at end of linked list, should be its own thread now
-			consume_cnct(&head,&tail); //consuming the head of the linked list I just threw the last socket on
-			//above should both be new threads. Our "pool" of threads is an abstraction, with the reality being a continuom of creation and destruction of new threads with the linked list used by the producer/consumer functions as the only thing that lasts. OR IS IT? I don't know. That's what you're for, Adriana.
+			produce_cnct(new_sock, &head, &tail); //inserting socket at end of linked list. Only executed on main thread
+
+			//Idea: Have all the waiting threads in the pool and never call them explicitely, with the threads instead constantly trying to consume
 
 			////////////////////////////////////////////////////////
 			/* You got a new connection.  Hand the connection off
@@ -130,7 +141,13 @@ void runserver(int numthreads, unsigned short serverport) {
         }
     }
     fprintf(stderr, "Server shutting down.\n");
-        
+
+	// threads are done doing work    
+    // wait for workers to complete
+    for (i = 0; i < num_threads; i++) {
+        pthread_join(threads[i], NULL);
+    }
+
     close(main_socket);
 }
 
