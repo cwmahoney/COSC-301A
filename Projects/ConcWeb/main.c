@@ -44,8 +44,11 @@ void usage(const char *progname) {
 int consume_cnct(struct node **head_ptr, struct node **tail_ptr){ //working with sockets right now, not sure if it's right
 	//Need condition variable incase list is empty
 	LOCK(&sock_mut); //locked over all threads
-	while(*head_ptr==NULL){
+	while((*head_ptr==NULL)&&(still_running==TRUE)){
 		WAIT(&consumer,&sock_mut);
+	}
+	if(still_running==FALSE){
+		return -1;
 	}
 	int socket = (*head_ptr)->socket;
 	killHead(head_ptr,tail_ptr);
@@ -65,7 +68,9 @@ void *worker(void *v){
 	struct node ***sock_list = (struct node ***)v;
 	while(still_running){
 		int socket = consume_cnct(sock_list[0],sock_list[1]);
-
+		if(socket==-1){ //still_running==FALSE
+			return NULL; //stock running because we're done
+		}
 		//STUFF!!
 
 		shutdown(socket, 2); //shutting down the socket at the end of use
@@ -144,6 +149,7 @@ void runserver(int num_threads, unsigned short serverport) {
 
 	// threads are done doing work    
     // wait for workers to complete
+	pthread_cond_broadcast(&consumer); //wakes up all the consumers, which will then escape and stop running
     for (i = 0; i < num_threads; i++) {
         pthread_join(threads[i], NULL);
     }
