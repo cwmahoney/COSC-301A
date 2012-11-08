@@ -76,7 +76,6 @@ void logToFile(char *buffer, char *filename, int bytes)
 
 char *intToString(int x)
 {
-	printf("x = %d\n", x);
 	char *digits;
 	int len = 0, power = 1;
 	while (power < x) {
@@ -127,34 +126,33 @@ void *worker(void *v){
 				int bytes;
 				if (stat(reqbuffer, &statresult) >= 0) { // file exists (200)
 					// opening file and reading contents
-					size_t filedesc = open(reqbuffer, O_WRONLY);
-					int nread;
-					char text[10000]; // ask Prof. Sommers tomorrow about size
-					nread = read(filedesc, text, sizeof(text));
-					printf("text = %s\n", text);
-					close(filedesc);
+					char text[10000], buf[101];
+					memset(buf, 0, sizeof(buf));
+					FILE *f = fopen(reqbuffer, "r");
+					while (fread(buf, 1, 100, f)) {
+						strcat(text, buf);
+					}
+					fclose(f);
 
 					// creating log
 					// adding the HTTP message to the front
 					strcpy(final_text, HTTP_200);
 					strcat(final_text, text);
-
-					// sending data
 					printf("final_text = %s\n", final_text);
+					// sending data
+					//printf("final_text = %s\n", final_text);
 					bytes = senddata(socket, final_text, strlen(final_text));
-					printf("bytes = %d\n", bytes);
 					strcpy(final_text, inet_ntoa(client_address.sin_addr)); // make a different variable for this for everyobody's sanity
-					printf("before %d\n", ntohs(client_address.sin_port));
 					char *temp = intToString(ntohs(client_address.sin_port));
-					printf("temp = %s\n", temp);
+					//printf("right before %s!!!!\n", temp);
 					strcat(final_text,temp);
+					//printf("right before %s!!!!\n", temp);
 					free(temp);
+					//printf("right after\n");
 					strcat(final_text, "TIME");
 					strcat(final_text, "\"GET /");
 					strcat(final_text, reqbuffer);
-					strcat(final_text, "\" 200 ");
-					printf("d\n");
-			
+					strcat(final_text, "\" 200 ");			
 				} else { // file does not exist (404)
 					// sending data
 					bytes = senddata(socket, HTTP_404, strlen(HTTP_404));
@@ -287,7 +285,7 @@ int main(int argc, char **argv) {
                 break;
         }
     }
-	num_threads = 5;
+	//num_threads = 5;
     runserver(num_threads, port);
     
     fprintf(stderr, "Server done.\n");
