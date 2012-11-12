@@ -43,14 +43,19 @@ void clear_list(struct node *curnode) { //not sure if we need this function
 /*Removes a node from the ll starting at head and terminating at tail*/
 void killHead(struct node **head_ptr, struct node **tail_ptr){
 	struct node *after = (*head_ptr)->next; //for ease of reading
+	struct node *temp;
 
-	if(after != NULL){ //head is not alone	
+	if(after != NULL){ //head is not alone
+		temp = *head_ptr;	
 		*head_ptr = after;
+		free(temp);
 	}else{
+		temp = *head_ptr;
 		*head_ptr = NULL; //entire list is empty now
 		*tail_ptr = NULL;
+		free(temp);
 	}
 
 	//shutdown((*head_ptr)->socket, 2); //closing socket, stopping both output and input
-	free(*head_ptr);
+	//free(*head_ptr);
 }

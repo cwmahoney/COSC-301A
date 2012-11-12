@@ -1,30 +1,40 @@
-127.0.0.138447TIME"GET /testfiles/e6f9f290.html" 200  65
-127.0.0.138448TIME"GET /testfiles/fa4671de.html" 200  65
-127.0.0.138449TIME"GET /testfiles/56ce3276.html" 200  65
-127.0.0.138450TIME"GET /testfiles/e8db696b.html" 200  65
-127.0.0.138451TIME"GET /testfiles/a36b7676.html" 200  65
-127.0.0.138467TIME"GET /testfiles/736ea67c.html" 200  65
-127.0.0.138468TIME"GET /testfiles/736ea67c.html" 200  65
-127.0.0.138469TIME"GET /testfiles/fa4671de.html" 200  65
-127.0.0.138470TIME"GET /testfiles/a36b7676.html" 200  65
-127.0.0.138471TIME"GET /testfiles/e8db696b.html" 200  65
-127.0.0.138483TIME"GET /testfiles/fa4671de.html" 200  65
-127.0.0.138484TIME"GET /testfiles/b7bef6f1.html" 200  65
-127.0.0.138485TIME"GET /testfiles/a36b7676.html" 200  65
-127.0.0.138486TIME"GET /testfiles/75312ca9.html" 200  65
-127.0.0.138487TIME"GET /testfiles/bb6bf072.html" 200  65
-127.0.0.138495TIME"GET /testfiles/b7bef6f1.html" 200  65
-127.0.0.138496TIME"GET /testfiles/a36b7676.html" 200  65
-127.0.0.138497TIME"GET /testfiles/736ea67c.html" 200  65
-127.0.0.138498TIME"GET /testfiles/bb6bf072.html" 200  65
-127.0.0.138499TIME"GET /testfiles/736ea67c.html" 200  65
-127.0.0.138541TIME"GET /testfiles/736ea67c.html" 200  65
-127.0.0.138542TIME"GET /testfiles/bb6bf072.html" 200  65
-127.0.0.138543TIME"GET /testfiles/fa9f6db7.html" 200  65
-127.0.0.138544TIME"GET /testfiles/bb6bf072.html" 200  65
-127.0.0.138545TIME"GET /testfiles/56ce3276.html" 200  65
-127.0.0.138681TIME"GET /testfiles/fa4671de.html" 200  65
-127.0.0.138682TIME"GET /testfiles/75312ca9.html" 200  65
-127.0.0.138683TIME"GET /testfiles/e8db696b.html" 200  65
-127.0.0.138684TIME"GET /testfiles/bb6bf072.html" 200  65
-127.0.0.138685TIME"GET /testfiles/e6f9f290.html" 200  65
+127.0.0.144521Mon Nov 12 00:40:47 2012
+"GET //testfiles/b7bef6f1.html" 200  1194
+127.0.0.144522Mon Nov 12 00:40:48 2012
+"GET //testfiles/e6f9f290.html" 200  1190
+127.0.0.144523Mon Nov 12 00:40:48 2012
+"GET //testfiles/b7bef6f1.html" 200  1194
+127.0.0.144524Mon Nov 12 00:40:50 2012
+"GET //testfiles/e8db696b.html" 200  2527
+127.0.0.144525Mon Nov 12 00:40:51 2012
+"GET //testfiles/75312ca9.html" 200  1378
+127.0.0.144526 Mon Nov 12 00:41:56 2012 "GET //testfiles/e8db696b.html" 200  2527
+127.0.0.144527 Mon Nov 12 00:41:57 2012 "GET //testfiles/fa4671de.html" 200  1987
+127.0.0.144528 Mon Nov 12 00:41:58 2012 "GET //testfiles/fa4671de.html" 200  1987
+127.0.0.144529 Mon Nov 12 00:41:58 2012 "GET //testfiles/b7bef6f1.html" 200  1202
+127.0.0.144530 Mon Nov 12 00:41:58 2012 "GET //testfiles/a36b7676.html" 200  1178
+127.0.0.144531 Mon Nov 12 00:43:00 2012 "GET //testfiles/e6f9f290.html" 200  1190
+127.0.0.144532 Mon Nov 12 00:43:01 2012 "GET //testfiles/b7bef6f1.html" 200  1194
+127.0.0.144533 Mon Nov 12 00:43:02 2012 "GET //testfiles/a36b7676.html" 200  1178
+127.0.0.144534 Mon Nov 12 00:43:02 2012 "GET //testfiles/fa9f6db7.html" 200  4280
+127.0.0.144535 Mon Nov 12 00:43:03 2012 "GET //testfiles/a36b7676.html" 200  1178
+127.0.0.144537 Mon Nov 12 00:43:13 2012 "GET //testfiles/a36b7676.html" 200  1170
+127.0.0.144538 Mon Nov 12 00:43:14 2012 "GET //testfiles/fa9f6db7.html" 200  4280
+127.0.0.144539 Mon Nov 12 00:43:14 2012 "GET //testfiles/e6f9f290.html" 200  1194
+127.0.0.144540 Mon Nov 12 00:43:15 2012 "GET //testfiles/e8db696b.html" 200  2538
+127.0.0.144541 Mon Nov 12 00:43:15 2012 "GET //testfiles/b7bef6f1.html" 200  1202
+127.0.0.144542 Mon Nov 12 00:43:16 2012 "GET //testfiles/e8db696b.html" 200  2538
+127.0.0.144543 Mon Nov 12 00:43:17 2012 "GET //testfiles/fa4671de.html" 200  1994
+127.0.0.144544 Mon Nov 12 00:43:17 2012 "GET //testfiles/bb6bf072.html" 200  1098
+127.0.0.144545 Mon Nov 12 00:43:17 2012 "GET //testfiles/e8db696b.html" 200  2538
+127.0.0.144546 Mon Nov 12 00:43:17 2012 "GET //testfiles/736ea67c.html" 200  1378
+127.0.0.144547 Mon Nov 12 00:43:17 2012 "GET //testfiles/fa9f6db7.html" 200  4280
+127.0.0.144548 Mon Nov 12 00:43:19 2012 "GET //testfiles/fa9f6db7.html" 200  4280
+127.0.0.144549 Mon Nov 12 00:43:19 2012 "GET //testfiles/e8db696b.html" 200  2538
+127.0.0.144550 Mon Nov 12 00:43:19 2012 "GET //testfiles/b7bef6f1.html" 200  1202
+127.0.0.144551 Mon Nov 12 00:43:20 2012 "GET //testfiles/b7bef6f1.html" 200  1202
+127.0.0.144552 Mon Nov 12 00:43:20 2012 "GET //testfiles/b7bef6f1.html" 200  1202
+127.0.0.144553 Mon Nov 12 00:43:20 2012 "GET //testfiles/e6f9f290.html" 200  1194
+127.0.0.144554 Mon Nov 12 00:43:21 2012 "GET //testfiles/e8db696b.html" 200  2538
+127.0.0.144555 Mon Nov 12 00:43:21 2012 "GET //testfiles/fa4671de.html" 200  1994
+127.0.0.144556 Mon Nov 12 00:43:21 2012 "GET //testfiles/bb6bf072.html" 200  1098
