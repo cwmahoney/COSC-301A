@@ -22,15 +22,6 @@ int main(int argc, char **argv){
 		directory = strdup(argv[1]);
 	}
 
-	
-
-	/*struct stat statresult;
-	int rv;
-
-	rv = stat(*instr, &statresult );
-	if(rv>=0){
-		return 1; //original command was valid
-	}*/
 	DIR *stream = opendir(directory);
 	free(directory);
 	struct stat statresult;

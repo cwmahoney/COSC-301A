@@ -2,4 +2,86 @@ Curt Mahoney
 11/14/2012
 Lab 08 Submission
 
+1)
+a) 1044 * 255 * 63 * 512 = 8,587,192,320B
+b) 10ms + (512*2^8)/(300*2^20/s) = 10.417ms
+c) ((512*2^8) / .010417s) / (2^20) = 11.9996160123 MB/s
+d) 10ms + (5*2^20)/(300*2^20/s) = 26.667ms
+e) ((5*2^20) / .026667s)) / (2^20) = 187.497656279 MB/s
+
+4) mytouch is a lot faster with fewer system calls. The brk calls are changing my memory allocation as a result of my string manipulation, I believe, and then we have the creat and close syscalls that I made.
+
+cwmahoney@eve:~/COSC-301A/Lab/Lab08$ strace ./mytouch junk.txt
+execve("./mytouch", ["./mytouch", "junk.txt"], [/* 39 vars */]) = 0
+uname({sys="Linux", node="eve", ...})   = 0
+brk(0)                                  = 0x82b9000
+brk(0x82b9cd0)                          = 0x82b9cd0
+set_thread_area({entry_number:-1 -> 6, base_addr:0x82b9830, limit:1048575, seg_32bit:1, contents:0, read_exec_only:0, limit_in_pages:1, seg_not_present:0, useable:1}) = 0
+brk(0x82dacd0)                          = 0x82dacd0
+brk(0x82db000)                          = 0x82db000
+creat("./junk.txt", 0700)               = 3
+close(3)                                = 0
+exit_group(0)                           = ?
+
+myls is a bit more cumbersome of a beast. We start out allocating some memory with brk's, I think, then open the current directory (./) and get into the loop: read a new directory, run stat, print out. After the loop, the directory stream is closed.
+
+
+cwmahoney@eve:~/COSC-301A/Lab/Lab08$ strace ./myls
+execve("./myls", ["./myls"], [/* 39 vars */]) = 0
+uname({sys="Linux", node="eve", ...})   = 0
+brk(0)                                  = 0x99fc000
+brk(0x99fccd0)                          = 0x99fccd0
+set_thread_area({entry_number:-1 -> 6, base_addr:0x99fc830, limit:1048575, seg_32bit:1, contents:0, read_exec_only:0, limit_in_pages:1, seg_not_present:0, useable:1}) = 0
+brk(0x9a1dcd0)                          = 0x9a1dcd0
+brk(0x9a1e000)                          = 0x9a1e000
+open("./", O_RDONLY|O_NONBLOCK|O_LARGEFILE|O_DIRECTORY|O_CLOEXEC) = 3
+fcntl64(3, F_GETFD)                     = 0x1 (flags FD_CLOEXEC)
+getdents(3, /* 14 entries */, 32768)    = 300
+stat64(".", {st_mode=S_IFDIR|0755, st_size=4096, ...}) = 0
+fstat64(1, {st_mode=S_IFCHR|0620, st_rdev=makedev(136, 0), ...}) = 0
+mmap2(NULL, 4096, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0xb7725000
+write(1, ". directory\n", 12. directory
+)           = 12
+stat64("..", {st_mode=S_IFDIR|0700, st_size=4096, ...}) = 0
+write(1, ".. directory\n", 13.. directory
+)          = 13
+stat64("a.out", {st_mode=S_IFREG|0755, st_size=7435, ...}) = 0
+write(1, "a.out file 7435B\n", 17a.out file 7435B
+)      = 17
+stat64("TESTDIR", {st_mode=S_IFDIR|0755, st_size=4096, ...}) = 0
+write(1, "TESTDIR directory\n", 18TESTDIR directory
+)     = 18
+stat64("mytouch.c", {st_mode=S_IFREG|0644, st_size=698, ...}) = 0
+write(1, "mytouch.c file 698B\n", 20mytouch.c file 698B
+)   = 20
+stat64("myls.c~", {st_mode=S_IFREG|0644, st_size=1463, ...}) = 0
+write(1, "myls.c~ file 1463B\n", 19myls.c~ file 1463B
+)    = 19
+stat64("myls.c", {st_mode=S_IFREG|0644, st_size=1463, ...}) = 0
+write(1, "myls.c file 1463B\n", 18myls.c file 1463B
+)     = 18
+stat64("Lab08Answers.txt", {st_mode=S_IFREG|0644, st_size=294, ...}) = 0
+write(1, "Lab08Answers.txt file 294B\n", 27Lab08Answers.txt file 294B
+) = 27
+stat64("mytouch.c~", {st_mode=S_IFREG|0644, st_size=725, ...}) = 0
+write(1, "mytouch.c~ file 725B\n", 21mytouch.c~ file 725B
+)  = 21
+stat64("junk.txt", {st_mode=S_IFREG|0700, st_size=0, ...}) = 0
+write(1, "junk.txt file 0B\n", 17junk.txt file 0B
+)      = 17
+stat64("mytouch", {st_mode=S_IFREG|0755, st_size=583529, ...}) = 0
+write(1, "mytouch file 583529B\n", 21mytouch file 583529B
+)  = 21
+stat64("myls", {st_mode=S_IFREG|0755, st_size=584941, ...}) = 0
+write(1, "myls file 584941B\n", 18myls file 584941B
+)     = 18
+stat64("lab08.pdf", {st_mode=S_IFREG|0644, st_size=53588, ...}) = 0
+write(1, "lab08.pdf file 53588B\n", 22lab08.pdf file 53588B
+) = 22
+stat64("Lab08Answers.txt~", {st_mode=S_IFREG|0644, st_size=6, ...}) = 0
+write(1, "Lab08Answers.txt~ file 6B\n", 26Lab08Answers.txt~ file 6B
+) = 26
+getdents(3, /* 0 entries */, 32768)     = 0
+close(3)                                = 0
+exit_group(0)                           = ?
 
