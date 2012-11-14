@@ -4,10 +4,10 @@ Lab 08 Submission
 
 1)
 a) 1044 * 255 * 63 * 512 = 8,587,192,320B
-b) 10ms + (512*2^8)/(300*2^20/s) = 10.417ms
-c) ((512*2^8) / .010417s) / (2^20) = 11.9996160123 MB/s
-d) 10ms + (5*2^20)/(300*2^20/s) = 26.667ms
-e) ((5*2^20) / .026667s)) / (2^20) = 187.497656279 MB/s
+b) 10ms + (512/(300*2^20/s)) = 10.002ms
+c) (512/2^20) / .010002 = 0.049 MB/s
+d) 10ms + 5/300/s = 26.667ms
+e) 5MB / .026667s = 187.497656279 MB/s
 
 4) mytouch is a lot faster with fewer system calls. The brk calls are changing my memory allocation as a result of my string manipulation, I believe, and then we have the creat and close syscalls that I made.
 
