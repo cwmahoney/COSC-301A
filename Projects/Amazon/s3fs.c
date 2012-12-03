@@ -69,7 +69,9 @@ int fs_mknod(const char *path, mode_t mode, dev_t dev) {
  * use mode|S_IFDIR.
  */
 int fs_mkdir(const char *path, mode_t mode) {
-    fprintf(stderr, "fs_mkdir(path=\"%s\", mode=0%3o)\n", path, mode);
+    
+
+	fprintf(stderr, "fs_mkdir(path=\"%s\", mode=0%3o)\n", path, mode);
     s3context_t *ctx = GET_PRIVATE_DATA;
     mode |= S_IFDIR;
 	/*
@@ -317,18 +319,20 @@ void *fs_init(struct fuse_conn_info *conn)
 	return ctx;
 }
 
-void rec_dir_free(s3context_t *ctx, char *path){
+/*void rec_dir_free(s3context_t *ctx, char *path){
+
+	
 	s3dirent_t *curdir;
 	int rs = s3fs_get_object(ctx->s3bucket, path, (uint8_t**) curdir, 0, 0);
 	s3dirent_t **newobject;
 	char stuff[10];
 	int i = 1;
-	/*for(; i < (curdir[0]->size) / sizeof(s3dirent_t);i++){
+	for(; i < (curdir[0]->size) / sizeof(s3dirent_t);i++){
 		printf("trying to create child\n");
 		fflush(stdout);
 		printf("newsize = %s %d\n", curdir[0]->name, strlen(curdir[0]->name) + strlen(path) + 1);
 		//newdest = malloc((strlen(curdir[0]->name) + strlen(path) + 1) * sizeof(char));
-		/*strcpy(newdest, path);
+		strcpy(newdest, path);
 		printf("newdest = %s\n", newdest);
 		strcat(newdest, curdir[0]->name);
 		printf("newdest = %s\n", newdest);
@@ -337,14 +341,14 @@ void rec_dir_free(s3context_t *ctx, char *path){
 		s3fs_get_object(ctx->s3bucket, curdir[i]->name, (uint8_t**) newobject, 0, 0);
 		if((*newobject)->type == 'd'){
 			rec_dir_free(ctx, newdest);
-		}*/
+		}
 		
 		//free(newdest);
 		//free(curdir[i]);
 	//}
 	//free(*curdir);
 	printf("This bs is done\n");
-}
+}*/
 
 /*
  * Clean up filesystem -- free any allocated data.
@@ -352,10 +356,10 @@ void rec_dir_free(s3context_t *ctx, char *path){
  */
 void fs_destroy(void *userdata) {
     fprintf(stderr, "fs_destroy --- shutting down file system.\n");
-	
-	rec_dir_free(userdata, "/");
-
-    free(userdata);
+	s3context_t *ctx = GET_PRIVATE_DATA;
+	//rec_dir_free(userdata, "/"); //yargh!!!!!!!!!
+	s3fs_clear_bucket(ctx->s3bucket)
+	free(ctx); //same as userdata
 }
 
 /*
