@@ -30,7 +30,6 @@ typedef struct {
 typedef struct {
 	unsigned char type; // file f, directory d, or unused u
 	char name[256]; 	// reasonable upper-bound on a name
-	
 	// metadata goes here
 	unsigned int size; // size of file in bytes
 	char owner[256]; // name of owner
