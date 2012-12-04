@@ -169,10 +169,12 @@ int fs_rmdir(const char *path) {
 	int i = 0;
 	for(;i < (psize/sizeof(s3dirent_t));i++){
 		if(strcmp(temp[i].name,base)!==0){ //not the same name
-			temp[i]->type = 'u';
+			temp[i].type = 'u';
 			break;
 		}
-	}*/	//I don't use it because it's simplicity makes me sad and because it throws off size calculations
+	}
+	return 0;
+	*/	//I don't use it because it's simplicity makes me sad and because it throws off size calculations
 
 	const char *directory = (const char *) dirname((char *) path);
 	const char *base = (const char *) basename((char *) path);
