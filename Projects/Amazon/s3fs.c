@@ -43,7 +43,12 @@
 int fs_getattr(const char *path, struct stat *statbuf) {
     fprintf(stderr, "fs_getattr(path=\"%s\")\n", path);
     s3context_t *ctx = GET_PRIVATE_DATA;
-    return -EIO;
+	s3dirent_t *curdir;
+	int rs = s3fs_get_object(ctx->s3bucket, path, (uint8_t**) curdir, 0, 0);
+
+	statbuf = curdir->metadata;
+	return 0; //assume that opendir was successfully called before this, so no problems will be encountered
+    //return -EIO;
 }
 
 
@@ -259,7 +264,12 @@ int fs_fsync(const char *path, int datasync, struct fuse_file_info *fi) {
 int fs_opendir(const char *path, struct fuse_file_info *fi) {
     fprintf(stderr, "fs_opendir(path=\"%s\")\n", path);
     s3context_t *ctx = GET_PRIVATE_DATA;
-    return -EIO;
+	int rs = s3fs_test_bucket(ctx->s3bucket);
+	if(rs==0) //bucket exists
+		return 0;
+	else
+		return -1;
+    //return -EIO;
 }
 
 /*
@@ -274,6 +284,26 @@ int fs_readdir(const char *path, void *buf, fuse_fill_dir_t filler, off_t offset
     s3context_t *ctx = GET_PRIVATE_DATA;
     return -EIO;
 }
+
+
+/*
+fs_readdir Read the entries of a directory object. This function is a little weird in that one of the callback function arguments is a pointer to a function named filler (of type fuse_fill_dir_t) and a buffer (buf) for filling
+in directory items. Inside fs_readdir, you should retrieve the directory object, then set up a for loop in which you call the fill function for every item in the directory. For example:
+
+// objsize is the size of the retrieved directory object
+int numdirent = objsize / sizeof(s3dirent_t);
+int i = 0;
+for (; i < numdirent; i++) {
+	//call filler function to fill in directory name
+	//to the supplied buffer
+	if (filler(buf, dir[i].name, NULL, 0) != 0) {
+		return -ENOMEM;
+	}
+}
+
+
+
+*/
 
 /*
  * Release directory.
@@ -307,12 +337,38 @@ void *fs_init(struct fuse_conn_info *conn)
 	s3dirent_t *root = malloc(sizeof(s3dirent_t));
 	strcpy(root->name, ".");
 	root->type = 'd';
-	root->size = sizeof(s3dirent_t);
-	strcpy(root->owner, strrchr(ctx->s3bucket, '.') + 1);
+
+	root->metadata->st_mode = 755;
+	root->metadata->st_uid = getuid();
+	root->metadata->st_size = sizeof(s3dirent_t);
+	time(&root->metadata->st_atime);
+	time(&root->metadata->st_mtime);
+	time(&root->metadata->st_ctime);
+
+	root->metadata->st_nlink = 1;
+	root->metadata->st_gid = getgid();
 	
-	time(&root->lastaccess);
-	time(&root->lastmod);
-	root->permissions = 755;
+
+	/* Only using:
+	
+    mode_t    st_mode;    //protection
+    uid_t     st_uid;     //user ID of owner
+    off_t     st_size;    //total size, in bytes
+    time_t    st_atime;   //time of last access
+    time_t    st_mtime;   //time of last modification
+
+	nlink_t   st_nlink;   //number of hard links - should be 1
+	gid_t     st_gid;     //group ID of owner
+	time_t    st_ctime;   //time of last status change
+	*/
+
+
+	//root->size = sizeof(s3dirent_t);
+	//strcpy(root->owner, strrchr(ctx->s3bucket, '.') + 1);
+	
+	//time(&root->lastaccess);
+	//time(&root->lastmod);
+	//root->permissions = 755;
 	
 	s3fs_put_object(ctx->s3bucket, "/", (uint8_t*) root, sizeof(s3dirent_t));
 
@@ -358,7 +414,7 @@ void fs_destroy(void *userdata) {
     fprintf(stderr, "fs_destroy --- shutting down file system.\n");
 	s3context_t *ctx = GET_PRIVATE_DATA;
 	//rec_dir_free(userdata, "/"); //yargh!!!!!!!!!
-	s3fs_clear_bucket(ctx->s3bucket)
+	s3fs_clear_bucket(ctx->s3bucket);
 	free(ctx); //same as userdata
 }
 
