@@ -1,5 +1,5 @@
 CC = gcc
-CFLAGS = -g -Wall `pkg-config fuse --cflags` `curl-config --cflags` `xml2-config --cflags` -I libs3-2.0/inc
+CFLAGS = -g `pkg-config fuse --cflags` `curl-config --cflags` `xml2-config --cflags` -I libs3-2.0/inc
 COMMON_OBJS = libs3_wrapper.o 
 TEST_OBJS = libs3_wrapper_test.o
 S3FS_OBJS = s3fs.o 
