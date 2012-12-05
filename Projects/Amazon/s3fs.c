@@ -358,7 +358,7 @@ int fs_write(const char *path, const char *buf, size_t size, off_t offset, struc
 	
 	int i = 0;
 	for(;i<(size-offset);i++){
-		if(i+1<(size-offset){
+		if(i+1<(size-offset)){
 			whole[offset + i] = 4>>buf[i] + buf[i+1]; //chars are 4 bits, need to make them int sized
 		}else{
 			whole[offset+i] = buf[i];
@@ -366,19 +366,21 @@ int fs_write(const char *path, const char *buf, size_t size, off_t offset, struc
 	}
 	
 	s3fs_remove_object(ctx->s3bucket,path);
-	int newsize = s3fs_put_object(ctx->s3bucket, path, (uint8_t **) *whole, rs+size-offset);
+	int newsize = s3fs_put_object(ctx->s3bucket, path, (uint8_t *) whole, rs+size-offset);
 	//rs+size-offset accounts for growing the file from the middle
 
 	s3dirent_t *parent; //updating metadata
-	s3fs_get_object(ctx->s3bucket, (const char *) basename((char *) path), (uint8_t **) *parent, 0, 0);
+	s3fs_get_object(ctx->s3bucket, (const char *) basename((char *) path), (uint8_t **) parent, 0, 0);
 
 	i = 1;
-	for(;i<parent->size/sizeof(s3dirent_t);i++){
-		if(parent[i].name==basename(path)){
-			parent[i].metadata->st_stize = newsize;
+	for(;i<parent->metadata->st_size/sizeof(s3dirent_t);i++){
+		if(parent[i].name==basename((char *) path)){
+			parent[i].metadata->st_size = newsize;
 			break;
 		}
 	}
+
+	free(whole);
 
 	return newsize;
     //return -EIO;
