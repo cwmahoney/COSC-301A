@@ -55,13 +55,12 @@ typedef struct {
 	
     mode_t    st_mode;    //protection
     uid_t     st_uid;     //user ID of owner
-    off_t     st_size;    //total size, in bytes
     time_t    st_atime;   //time of last access
     time_t    st_mtime;   //time of last modification
 
 	nlink_t   st_nlink;   //number of hard links - should be 1
 	gid_t     st_gid;     //group ID of owner
-	time_t    st_ctime;   //time of last status change
+	time_t    st_ctime;   //time of last status change - Read: Create time
 	*/
 } s3dirent_t;
 
