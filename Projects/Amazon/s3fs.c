@@ -32,12 +32,12 @@
  * value for an error code.)
  */
 
-void growDir(s3dirent_t *entry, s3dirent_t *parent, size_t par_size, const char *path, s3context_t *ctx){
+void growDir(s3dirent_t *entry, s3dirent_t *parent, size_t psize, const char *path, s3context_t *ctx){
 	const char *directory = (const char *) dirname((char *) path);
 	//const char *base = (const char *) basename((char *) path); //ease of use
 
 	//putting entry for entry in parent's array
-	size_t psize = parent->metadata->st_size; //size of first entry in parent directory, the "." entry
+	//size_t psize = parent->metadata->st_size; //size of first entry in parent directory, the "." entry
 	s3dirent_t *temp = malloc(psize + sizeof(s3dirent_t));
 	
 	//copying over old values. Inefficient to grow array by one at a time, but that's what you wanted: Muwhaha.
@@ -59,7 +59,7 @@ void growDir(s3dirent_t *entry, s3dirent_t *parent, size_t par_size, const char 
 	s3fs_put_object(ctx->s3bucket, directory, (uint8_t*) temp, (psize + sizeof(s3dirent_t)));
 }
 
-void shrinkDir(s3dirent_t *parent, size_t par_size, const char *path, s3context_t *ctx){
+void shrinkDir(s3dirent_t *parent, size_t psize, const char *path, s3context_t *ctx){
 	/*
 	//or, more simply
 	tgtdir->type = 'u'; //have to input it
@@ -78,7 +78,7 @@ void shrinkDir(s3dirent_t *parent, size_t par_size, const char *path, s3context_
 	const char *base = (const char *) basename((char *) path);
 
 	//pulling tgtdir from parent's array
-	size_t psize = parent->metadata->st_size; //size stored in first entry in parent directory, the "." entry
+	//size_t psize = parent->metadata->st_size; //size stored in first entry in parent directory, the "." entry
 	s3dirent_t *temp = malloc(psize - sizeof(s3dirent_t));
 	
 	//copying over old values.
@@ -155,6 +155,10 @@ int fs_getattr(const char *path, struct stat *statbuf) {
 int fs_mknod(const char *path, mode_t mode, dev_t dev) {
     fprintf(stderr, "fs_mknod(path=\"%s\", mode=0%3o)\n", path, mode);
     s3context_t *ctx = GET_PRIVATE_DATA;
+
+	if(strlen(basename((char *) path))>255){
+		return -ENAMETOOLONG;
+	}
 	
 	s3dirent_t *parent;
 	int par_size = s3fs_get_object(ctx->s3bucket, (const char *) dirname((char *) path), (uint8_t**) parent, 0, 0); //grabbing parent directory
@@ -196,6 +200,10 @@ int fs_mkdir(const char *path, mode_t mode) {
 	fprintf(stderr, "fs_mkdir(path=\"%s\", mode=0%3o)\n", path, mode);
     s3context_t *ctx = GET_PRIVATE_DATA;
     mode |= S_IFDIR;
+
+	if(strlen(basename((char *) path))>255){
+		return -ENAMETOOLONG;
+	}
 
 	s3dirent_t *curdir;
 	if(s3fs_get_object(ctx->s3bucket, path, (uint8_t**) curdir, 0, 0) != -1){ //object already exists
@@ -284,6 +292,10 @@ int fs_rmdir(const char *path) {
 int fs_rename(const char *path, const char *newpath) {
     fprintf(stderr, "fs_rename(fpath=\"%s\", newpath=\"%s\")\n", path, newpath);
     s3context_t *ctx = GET_PRIVATE_DATA;
+
+	if(strlen(basename((char *) path))>255){
+		return -ENAMETOOLONG;
+	}
 
 	s3dirent_t *old_parent;
 	int old_par_size = s3fs_get_object(ctx->s3bucket, (const char *) dirname((char *) path), (uint8_t**) old_parent, 0, 0); //grabbing parent directory
@@ -407,12 +419,18 @@ int fs_open(const char *path, struct fuse_file_info *fi) {
 int fs_read(const char *path, char *buf, size_t size, off_t offset, struct fuse_file_info *fi) {
     fprintf(stderr, "fs_read(path=\"%s\", buf=%p, size=%d, offset=%d)\n", path, buf, (int)size, (int)offset);
     s3context_t *ctx = GET_PRIVATE_DATA;
+	
+	s3dirent_t *temp;
+	int file_size = s3fs_get_object(ctx->s3bucket, path, (uint8_t**) temp, 0, 0);
 
-	if(offset>size){
+	if(offset>file_size){
 		return 0;
 	}
+	if(offset+size>file_size){
+		; //not sure if something should happen. ???
+	}
 
-	int rs = s3fs_get_object(ctx->s3bucket, path, (uint8_t**) buf, offset, (size-offset));
+	int rs = s3fs_get_object(ctx->s3bucket, path, (uint8_t**) buf, offset, size); //might error out. Needs testing ???
 
 	s3dirent_t *parent; //grabbing parent for metadata update to atime
 	int par_size = s3fs_get_object(ctx->s3bucket, path, (uint8_t**) parent, 0, 0);
@@ -457,8 +475,8 @@ int fs_write(const char *path, const char *buf, size_t size, off_t offset, struc
 	}
 	
 	s3fs_remove_object(ctx->s3bucket,path);
-	int newsize = s3fs_put_object(ctx->s3bucket, path, (uint8_t *) whole, rs+size-offset);
-	//rs+size-offset accounts for growing the file from the middle
+	int newsize = s3fs_put_object(ctx->s3bucket, path, (uint8_t *) whole, rs+size);
+	//rs+size accounts for growing the file from the middle
 
 	s3dirent_t *parent; //updating metadata
 	int par_size = s3fs_get_object(ctx->s3bucket, (const char *) basename((char *) path), (uint8_t **) parent, 0, 0);
