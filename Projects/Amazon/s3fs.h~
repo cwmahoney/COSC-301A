@@ -29,7 +29,7 @@ typedef struct {
 
 typedef struct {
 	unsigned char type; // file f, directory d, or unused u
-	char name[256]; 	// reasonable upper-bound on a name
+	char name[2]; 	// reasonable upper-bound on a name
 	
 	// metadata goes here
 	struct stat metadata;
