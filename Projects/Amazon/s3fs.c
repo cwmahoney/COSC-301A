@@ -491,10 +491,18 @@ int fs_read(const char *path, char *buf, size_t size, off_t offset, struct fuse_
 
 	int rs = s3fs_get_object(ctx->s3bucket, path, (uint8_t**) buf, offset, size); //might error out. Needs testing ???
 
+	memcpy(buf[rs],0,sizeof(buf)-rs);
+
+	if(rs==-1){
+		return -1; //might need more sophicsticaed error message
+	}
+
 	s3dirent_t *parent = NULL; //grabbing parent for metadata update to atime
 	int par_size = s3fs_get_object(ctx->s3bucket, path, (uint8_t**) parent, 0, 0);
 
 	time(&parent[getObjectIndex(parent, par_size, base)].metadata.st_atime); //updating access time for file
+
+	
 
 	return rs;
     //return -EIO;
