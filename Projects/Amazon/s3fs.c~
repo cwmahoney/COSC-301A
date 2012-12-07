@@ -688,8 +688,6 @@ int fs_access(const char *path, int mask) {
     fprintf(stderr, "fs_access(path=\"%s\", mask=0%o)\n", path, mask);
     s3context_t *ctx = GET_PRIVATE_DATA;
 
-	return 0; //complicated, might do if I have the time
-
 	s3dirent_t *parent = NULL;
 	int par_size = s3fs_get_object(ctx->s3bucket, (const char *) dirname((char *) path), (uint8_t**) parent, 0, 0);
 
