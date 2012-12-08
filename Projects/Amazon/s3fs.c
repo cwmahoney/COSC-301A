@@ -458,6 +458,22 @@ int fs_rename(const char *path, const char *newpath) {
 
 	s3fs_put_object(ctx->s3bucket, newpath, (uint8_t *) tgt, tgt_size);
 
+	if(tgt_shell.metadata->type == 'd'){ // directory, need to recurse down
+		int i = 0;
+		for(;i<tgt_size/sizeof(s3dirent_t);i++){
+			char child_oldpath[strlen(path)+strlen(tgt[i].name)];
+			strcpy(child_oldpath, path);
+			strcat(child_oldpath, tgt[i].name);
+
+			char child_newpath[strlen(newpath)+strlen(tgt[i].name)];
+			strcpy(child_newpath, newpath);
+			strcat(child_newpath, tgt[i].name);
+
+			fs_rename(child_oldpath,child_newpath);
+		}
+	}
+
+
 	return 0;
 	
     //return -EIO;
