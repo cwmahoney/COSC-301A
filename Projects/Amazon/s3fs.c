@@ -4,6 +4,14 @@
 
 /* When adding directories, they should have a / at the end!! */
 
+/*
+Curtis Mahoney & Adriana Sperlea
+12/7/2012
+Purpose: Implement an AmazonS3 interface for cloud-based file actions
+-Note: Debugging printf's are left in on purpose, as end-user will not see them unless in -d mode.
+
+*/
+
 #include "s3fs.h"
 #include "libs3_wrapper.h"
 
@@ -116,7 +124,7 @@ void shrinkDir(s3dirent_t *parent, size_t psize, const char *path, s3context_t *
 		//printf("Old name: %s\n",temp[i].name);
 	}
 	
-	strncpy((char *)temp->name, (char *)parent->name, 256);
+	strcpy((char *)temp->name, (char *)parent->name);
 
 	temp->type = parent->type;
 
@@ -138,6 +146,7 @@ void shrinkDir(s3dirent_t *parent, size_t psize, const char *path, s3context_t *
 	//printf("Directory: %s\n",directory);
 
 	s3fs_remove_object(ctx->s3bucket, directory); //kicking and replacing old directory in sequence
+	printf("When shrinking we're putting back size %d\n", psize - sizeof(s3dirent_t));
 	s3fs_put_object(ctx->s3bucket, directory, (uint8_t*) temp, psize - sizeof(s3dirent_t));
 	s3fs_remove_object(ctx->s3bucket, path); //removing target object
 	free(temp);
@@ -438,20 +447,18 @@ int fs_rename(const char *path, const char *newpath) {
 
 	free(nptemp);
 
-	s3dirent_t *new_parent;
-	int new_par_size;
-	if(strcmp(directory,ndirectory)!=0){ //different parent directory. Keeps code size down		
-		new_par_size = s3fs_get_object(ctx->s3bucket, (const char *) ndirectory, (uint8_t**) &new_parent, 0, 0);
-	}else{
-		new_parent = old_parent;
-		new_par_size = old_par_size;
-	}
+	
 
 	//no difference for directories or files. Just messing with dirent objects
 		
 	shrinkDir(old_parent,old_par_size,path,ctx);
 
 	strcpy((char *) tgt_shell.name, nbase);
+
+	s3dirent_t *new_parent;
+	int new_par_size;
+	new_par_size = s3fs_get_object(ctx->s3bucket, (const char *) ndirectory, (uint8_t**) &new_parent, 0, 0);
+
 	growDir(tgt_shell,new_parent,new_par_size,newpath, ctx); //swapping out directories holding pointer to tgt directory
 
 	time(&old_parent->metadata.st_mtime);
@@ -467,17 +474,21 @@ int fs_rename(const char *path, const char *newpath) {
 		int i = 0;
 		s3fs_put_object(ctx->s3bucket, path, (uint8_t *) tgt, tgt_size); //pushing it up to cloud temporarily so children can see it, refer to it.
 		for(;i<tgt_size/sizeof(s3dirent_t);i++){
-			char *child_oldpath = malloc(strlen(path)+strlen(tgt[i].name));
-			strcpy(child_oldpath, path);
-			strcat(child_oldpath, tgt[i].name);
+			if(strcmp(tgt[i].name,".") != 0){
+				char *child_oldpath = malloc(strlen(path)+strlen(tgt[i].name) + 1);
+				strcpy(child_oldpath, path);
+				strcat(child_oldpath, "/");
+				strcat(child_oldpath, tgt[i].name);
 
-			char *child_newpath = malloc(strlen(newpath)+strlen(tgt[i].name));
-			strcpy(child_newpath, newpath);
-			strcat(child_newpath, tgt[i].name);
+				char *child_newpath = malloc(strlen(newpath)+strlen(tgt[i].name) +1);
+				strcpy(child_newpath, newpath);
+				strcat(child_newpath, "/");
+				strcat(child_newpath, tgt[i].name);
 
-			fs_rename(child_oldpath,child_newpath);
-			free(child_oldpath);
-			free(child_newpath);
+				fs_rename(child_oldpath,child_newpath);
+				free(child_oldpath);
+				free(child_newpath);
+			}
 		}
 		s3fs_remove_object(ctx->s3bucket, path); //killing copy of tgt
 	}
@@ -526,12 +537,15 @@ int fs_truncate(const char *path, off_t newsize) {
 
 	free(ptemp);
 
-	uint8_t **tgt = NULL;
-	s3fs_get_object(ctx->s3bucket, path, tgt, 0, 0);
+	/*uint8_t **tgt = NULL;
+	printf("About to get object\n");
+	s3fs_get_object(ctx->s3bucket, path, tgt, 0, 0);*/
 
+	printf("Got object!\n");
 	s3fs_remove_object(ctx->s3bucket,path);
+	printf("Removed object\n");
 	s3fs_put_object(ctx->s3bucket, path, (uint8_t *) "", 0);
-
+	printf("Put object\n");
 	s3dirent_t *parent = NULL; //grabbing parent for metadata update to atime
 	int par_size = s3fs_get_object(ctx->s3bucket, directory, (uint8_t**) &parent, 0, 0);
 
