@@ -482,6 +482,10 @@ int fs_rename(const char *path, const char *newpath) {
 		s3fs_remove_object(ctx->s3bucket, path); //killing copy of tgt
 	}
 
+<<<<<<< HEAD
+=======
+
+>>>>>>> cee430cc7f1148dc5274b118dc34bdd643dce071
 	return 0;
 	
     //return -EIO;
