@@ -458,19 +458,24 @@ int fs_rename(const char *path, const char *newpath) {
 
 	s3fs_put_object(ctx->s3bucket, newpath, (uint8_t *) tgt, tgt_size);
 
-	if(tgt_shell.metadata->type == 'd'){ // directory, need to recurse down
+	if(tgt_shell.type == 'd'){ // directory, need to recurse down
+		//s3context_t *ctx = GET_PRIVATE_DATA; //need to redeclare for some reason
 		int i = 0;
+		s3fs_put_object(ctx->s3bucket, path, (uint8_t *) tgt, tgt_size); //pushing it up to cloud temporarily so children can see it, refer to it.
 		for(;i<tgt_size/sizeof(s3dirent_t);i++){
-			char child_oldpath[strlen(path)+strlen(tgt[i].name)];
+			char *child_oldpath = malloc(strlen(path)+strlen(tgt[i].name));
 			strcpy(child_oldpath, path);
 			strcat(child_oldpath, tgt[i].name);
 
-			char child_newpath[strlen(newpath)+strlen(tgt[i].name)];
+			char *child_newpath = malloc(strlen(newpath)+strlen(tgt[i].name));
 			strcpy(child_newpath, newpath);
 			strcat(child_newpath, tgt[i].name);
 
 			fs_rename(child_oldpath,child_newpath);
+			free(child_oldpath);
+			free(child_newpath);
 		}
+		s3fs_remove_object(ctx->s3bucket, path); //killing copy of tgt
 	}
 
 
