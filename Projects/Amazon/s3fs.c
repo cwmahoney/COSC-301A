@@ -33,11 +33,13 @@
  * value for an error code.)
  */
 
-void growDir(s3dirent_t *entry, s3dirent_t *parent, size_t psize, const char *path, s3context_t *ctx){
+void growDir(s3dirent_t entry, s3dirent_t *parent, size_t psize, const char *path, s3context_t *ctx){
 	char * ptemp = strdup(path);
-	char *directory = dirname(ptemp);
-	//strcpy(ptemp,path);
-	//char *base = basename(ptemp);
+	char *ptemp2;
+	ptemp2 = dirname(ptemp);
+	char directory[strlen(ptemp2)];
+	strcpy(directory,ptemp2);
+
 	free(ptemp);
 
 	//putting entry for entry in parent's array
@@ -50,7 +52,7 @@ void growDir(s3dirent_t *entry, s3dirent_t *parent, size_t psize, const char *pa
 		temp[i]=parent[i];
 	}
 
-	temp[i] = *entry; //only to let us know it's their. Not a pointer or anything.
+	temp[i] = entry; //only to let us know it's their. Not a pointer or anything.
 
 	strncpy((char *)temp->name, (char *)parent->name, 256);
 	temp->type = parent->type;
@@ -61,6 +63,7 @@ void growDir(s3dirent_t *entry, s3dirent_t *parent, size_t psize, const char *pa
 
 	s3fs_remove_object(ctx->s3bucket, directory); //kicking and replacing old directory in sequence
 	s3fs_put_object(ctx->s3bucket, directory, (uint8_t*) temp, (psize + sizeof(s3dirent_t)));
+	free(temp);
 }
 
 void shrinkDir(s3dirent_t *parent, size_t psize, const char *path, s3context_t *ctx){
@@ -79,36 +82,62 @@ void shrinkDir(s3dirent_t *parent, size_t psize, const char *path, s3context_t *
 	*/	//I don't use it because it's simplicity makes me sad and because it throws off size calculations
 
 	char * ptemp = strdup(path);
-	char *directory = dirname(ptemp);
+	char *ptemp2;
+	ptemp2 = dirname(ptemp);
+	char directory[strlen(ptemp2)];
+	strcpy(directory,ptemp2);
+
 	strcpy(ptemp,path);
-	char *base = basename(ptemp);
+	ptemp2 = basename(ptemp);
+	char base[strlen(ptemp2)];
+	strcpy(base,ptemp2);
+
 	free(ptemp);
 
 	//pulling tgtdir from parent's array
 	//size_t psize = parent->metadata.st_size; //size stored in first entry in parent directory, the "." entry
+	printf("sizes: %d %d\n", psize, psize - sizeof(s3dirent_t));
 	s3dirent_t *temp = malloc(psize - sizeof(s3dirent_t));
 	
 	//copying over old values.
 	int i = 0;
 	int k = 0;
-	for(;i < (psize/sizeof(s3dirent_t) -1);i++){
-		if(strcmp(temp[i].name,base)!=0){ //not the same name
+	//printf("!!!!!!!!!!!!!size = %d !!!!!!!!!!!!!!!\n",(psize/sizeof(s3dirent_t)));
+	for(;i < (psize/sizeof(s3dirent_t));i++){
+		if(strcmp((char *) parent[i].name, base)!=0){ //not the same name
 			temp[k]=parent[i];
-			k++; //lag behind parent after we hit the dying directory
+			printf("%s\n", temp[k].name);
+			k++; //lag behind parent after we hit the tgt entry
+			//printf("Copied: ");
 		}
+		//printf("Old name: %s\n",temp[i].name);
 	}
-
+	
 	strncpy((char *)temp->name, (char *)parent->name, 256);
+
 	temp->type = parent->type;
 
-	temp->metadata = parent->metadata; //steal parent's metadata struct
+	//temp->metadata = parent->metadata; //steal parent's metadata struct
+
+	//experiment
+	temp->metadata.st_mode = parent->metadata.st_mode;
+	temp->metadata.st_uid = parent->metadata.st_uid;
+	temp->metadata.st_ctime = parent->metadata.st_ctime;
+	temp->metadata.st_atime = parent->metadata.st_atime;
+
+	temp->metadata.st_nlink = parent->metadata.st_nlink;
+	temp->metadata.st_gid = parent->metadata.st_gid;
+	
+
 	//temp->metadata.st_size = (psize - sizeof(s3dirent_t));
 	time(&temp->metadata.st_mtime); //updating modification time for parent directory
 
-	s3fs_remove_object(ctx->s3bucket, directory); //kicking and replacing old directory in sequence
-	s3fs_put_object(ctx->s3bucket, directory, (uint8_t*) temp, (psize - sizeof(s3dirent_t)));
+	//printf("Directory: %s\n",directory);
 
-	s3fs_remove_object(ctx->s3bucket, path); //removing target directory
+	s3fs_remove_object(ctx->s3bucket, directory); //kicking and replacing old directory in sequence
+	s3fs_put_object(ctx->s3bucket, directory, (uint8_t*) temp, psize - sizeof(s3dirent_t));
+	s3fs_remove_object(ctx->s3bucket, path); //removing target object
+	free(temp);
 }
 
 int getObjectIndex(s3dirent_t *parent, size_t par_size, char *childname){
@@ -130,25 +159,32 @@ int getObjectIndex(s3dirent_t *parent, size_t par_size, char *childname){
 
 int fs_getattr(const char *path, struct stat *statbuf) {
 	char * ptemp = strdup(path);
-	char *directory = dirname(ptemp);
+	char *ptemp2;
+	ptemp2 = dirname(ptemp);
+	char directory[strlen(ptemp2)];
+	strcpy(directory,ptemp2);
+
 	strcpy(ptemp,path);
-	char *base = basename(ptemp);
+	ptemp2 = basename(ptemp);
+	char base[strlen(ptemp2)];
+	strcpy(base,ptemp2);
+
 	free(ptemp);
 
     fprintf(stderr, "fs_getattr(path=\"%s\")\n", path);
     s3context_t *ctx = GET_PRIVATE_DATA;
 	s3dirent_t *curdir = NULL;
-	int rs = s3fs_get_object(ctx->s3bucket, path, (uint8_t**) curdir, 0, 0);
-	printf("Got the object %d\n", rs);
+	int rs = s3fs_get_object(ctx->s3bucket, path, (uint8_t**) &curdir, 0, 0);
+	printf("rs = %d\n", rs);
 	if (rs == -1) {
-		return -1;
+		return -ENOENT;
 	}
 	if(curdir->type == 'd'){
 		curdir->metadata.st_size = rs; //don't keep track of size otherwise
 		*statbuf = curdir->metadata;
 	}else{ // a file
 		s3dirent_t *parent = NULL;
-		int par_size = s3fs_get_object(ctx->s3bucket, (const char *) (directory), (uint8_t**) parent, 0, 0);
+		int par_size = s3fs_get_object(ctx->s3bucket, (const char *) (directory), (uint8_t**) &parent, 0, 0);
 
 		int file_dir = getObjectIndex(parent, par_size, base);
 		parent[file_dir].metadata.st_size = rs;
@@ -173,9 +209,16 @@ int fs_mknod(const char *path, mode_t mode, dev_t dev) {
     s3context_t *ctx = GET_PRIVATE_DATA;
 
 	char * ptemp = strdup(path);
-	char *directory = dirname(ptemp);
+	char *ptemp2;
+	ptemp2 = dirname(ptemp);
+	char directory[strlen(ptemp2)];
+	strcpy(directory,ptemp2);
+
 	strcpy(ptemp,path);
-	char *base = basename(ptemp);
+	ptemp2 = basename(ptemp);
+	char base[strlen(ptemp2)];
+	strcpy(base,ptemp2);
+
 	free(ptemp);
 
 	if(strlen(base)>255){
@@ -183,29 +226,29 @@ int fs_mknod(const char *path, mode_t mode, dev_t dev) {
 	}
 	
 	s3dirent_t *parent = NULL;
-	int par_size = s3fs_get_object(ctx->s3bucket, (const char *) directory, (uint8_t**) parent, 0, 0); //grabbing parent directory
+	int par_size = s3fs_get_object(ctx->s3bucket, (const char *) directory, (uint8_t**) &parent, 0, 0); //grabbing parent directory
 	//we're assuming that parent exists
+	printf("Grabbed parent directory\n");
 
-	s3dirent_t *newfile_entry = malloc(sizeof(s3dirent_t)); //entry for array of parent directory
-	strncpy((char *)newfile_entry->name, (const char *) base, 256); //only copy first 256 bytes of name, if too long
-	newfile_entry->type = 'f';
+	s3dirent_t newfile_entry; //entry for array of parent directory
+	strcpy((char *)newfile_entry.name, (const char *) base); //only copy first 256 bytes of name, if too long
+	newfile_entry.type = 'f';
 	
-	newfile_entry->metadata.st_mode = mode; //protection
-	newfile_entry->metadata.st_uid = getuid(); //user ID of owner
+	newfile_entry.metadata.st_mode = mode; //protection
+	newfile_entry.metadata.st_uid = getuid(); //user ID of owner
 	//newfile_entry->metadata.st_size = 0; //total size of file, in bytes. empty now
-	time(&newfile_entry->metadata.st_atime); //time of last access
-	time(&newfile_entry->metadata.st_mtime);  //time of last modification
-	time(&newfile_entry->metadata.st_ctime); //time of last status change - Read: create
+	time(&newfile_entry.metadata.st_atime); //time of last access
+	time(&newfile_entry.metadata.st_mtime);  //time of last modification
+	time(&newfile_entry.metadata.st_ctime); //time of last status change - Read: create
 
-	newfile_entry->metadata.st_nlink = 1; //number of hard links - should be 1
-	newfile_entry->metadata.st_gid = getgid(); //group ID of owner
+	newfile_entry.metadata.st_nlink = 1; //number of hard links - should be 1
+	newfile_entry.metadata.st_gid = getgid(); //group ID of owner
 
 	//s3fs_put_object(ctx->s3bucket, path, (uint8_t*) newfile_entry, 0);
 
 	growDir(newfile_entry,parent, par_size,path, ctx);
 
-	uint8_t* sendthis = (uint8_t*) mknod(path, mode, dev);
-	s3fs_put_object(ctx->s3bucket, path, sendthis, strlen(sendthis));	
+	s3fs_put_object(ctx->s3bucket, path, (uint8_t*) mknod(path, mode, dev), sizeof(mknod(path, mode, dev)));	
 
 	return 0;
     //return -EIO;
@@ -225,22 +268,34 @@ int fs_mkdir(const char *path, mode_t mode) {
     mode |= S_IFDIR;
 
 	char * ptemp = strdup(path);
-	char *directory = dirname(ptemp);
+	char *ptemp2;
+	ptemp2 = dirname(ptemp);
+	char directory[strlen(ptemp2)];
+	strcpy(directory,ptemp2);
+
 	strcpy(ptemp,path);
-	char *base = basename(ptemp);
+	ptemp2 = basename(ptemp);
+	char base[strlen(ptemp2)];
+	strcpy(base,ptemp2);
+
 	free(ptemp);
+	//printf("!!!!!!!!!!!!!! Base: %s Dir: %s\n", base, directory);
 
 	if(strlen(base)>255){
 		return -ENAMETOOLONG;
 	}
-
+	
+	//printf("path: %s\n",path);
+	
 	s3dirent_t *curdir = NULL;
-	if(s3fs_get_object(ctx->s3bucket, path, (uint8_t**) curdir, 0, 0) != -1){ //object already exists
+	if(s3fs_get_object(ctx->s3bucket, path, (uint8_t**) &curdir, 0, 0) >= 0){ //object already exists
+		//printf("About to print -eexist\n");
 		return -EEXIST;
 	}
 
 	s3dirent_t *parent = NULL;
-	int par_size = s3fs_get_object(ctx->s3bucket, (const char *) directory, (uint8_t**) parent, 0, 0); //grabbing parent directory
+
+	int par_size = s3fs_get_object(ctx->s3bucket, (const char *) directory, (uint8_t**) &parent, 0, 0); //grabbing parent directory
 	//we're assuming that parent exists
 
 	s3dirent_t *newdir = malloc(sizeof(s3dirent_t)); //instantiating new directory
@@ -258,13 +313,15 @@ int fs_mkdir(const char *path, mode_t mode) {
 	newdir->metadata.st_gid = getgid(); //group ID of owner
 
 	s3fs_put_object(ctx->s3bucket, path, (uint8_t*) newdir, sizeof(s3dirent_t));
+	free(newdir);
 
-	s3dirent_t *newdir_entry = malloc(sizeof(s3dirent_t)); //entry for array of parent directory
-	strncpy((char *)newdir_entry->name, (const char *) base, 256); //only copy first 256 bytes of name, if too long
-	newdir_entry->type = 'd';
+	s3dirent_t newdir_entry; //entry for array of parent directory
+	strcpy((char *)newdir_entry.name, (const char *) base); //only copy first 256 bytes of name, if too long
+	newdir_entry.type = 'd';
 	//metadata within the actual (".") entry floating about on the cloud in its array
 
-	growDir(newdir,parent, par_size,path,ctx);
+	growDir(newdir_entry,parent, par_size,path,ctx);
+	//free(newdir_entry);
 
 	return 0;
 }
@@ -277,13 +334,17 @@ int fs_unlink(const char *path) {
     s3context_t *ctx = GET_PRIVATE_DATA;
 
 	char * ptemp = strdup(path);
-	char *directory = dirname(ptemp);
+	char *ptemp2;
+	ptemp2 = dirname(ptemp);
+	char directory[strlen(ptemp2)];
+	strcpy(directory,ptemp2);
+
 	free(ptemp);
 
 	//s3dirent_t *tgtdir, s3dirent_t *parent, size_t par_size, const char *path, s3context_t *ctx
 
 	s3dirent_t *parent = NULL;
-	int par_size = s3fs_get_object(ctx->s3bucket, (const char *) directory, (uint8_t**) parent, 0, 0); //grabbing parent directory
+	int par_size = s3fs_get_object(ctx->s3bucket, (const char *) directory, (uint8_t**) &parent, 0, 0); //grabbing parent directory
 
 	shrinkDir(parent, par_size, path, ctx);
 
@@ -301,13 +362,15 @@ int fs_rmdir(const char *path) {
     s3context_t *ctx = GET_PRIVATE_DATA;
 	
 	char * ptemp = strdup(path);
-	char *directory = dirname(ptemp);
-	//strcpy(ptemp,path);
-	//char *base = basename(ptemp);
+	char *ptemp2;
+	ptemp2 = dirname(ptemp);
+	char directory[strlen(ptemp2)];
+	strcpy(directory,ptemp2);
+
 	free(ptemp);
 
 	s3dirent_t *tgtdir = NULL; //checking for existence
-	int rs = s3fs_get_object(ctx->s3bucket, path, (uint8_t**) tgtdir, 0, 0);
+	int rs = s3fs_get_object(ctx->s3bucket, path, (uint8_t**) &tgtdir, 0, 0);
 	if(rs == -1){ //doesn't exist
 		return -ENOMEM; //not sure if this is the right error message
 	}
@@ -316,7 +379,7 @@ int fs_rmdir(const char *path) {
 	} //???
 
 	s3dirent_t *parent = NULL;
-	int par_size = s3fs_get_object(ctx->s3bucket, (const char *) directory, (uint8_t**) parent, 0, 0); //grabbing parent directory
+	int par_size = s3fs_get_object(ctx->s3bucket, (const char *) directory, (uint8_t**) &parent, 0, 0); //grabbing parent directory
 
 	shrinkDir(parent, par_size,path,ctx);	
 
@@ -333,9 +396,16 @@ int fs_rename(const char *path, const char *newpath) {
     s3context_t *ctx = GET_PRIVATE_DATA;
 
 	char * ptemp = strdup(path);
-	char *directory = dirname(ptemp);
+	char *ptemp2;
+	ptemp2 = dirname(ptemp);
+	char directory[strlen(ptemp2)];
+	strcpy(directory,ptemp2);
+
 	strcpy(ptemp,path);
-	char *base = basename(ptemp);
+	ptemp2 = basename(ptemp);
+	char base[strlen(ptemp2)];
+	strcpy(base,ptemp2);
+
 	free(ptemp);
 
 	if(strlen(base)>255){
@@ -343,36 +413,48 @@ int fs_rename(const char *path, const char *newpath) {
 	}
 
 	s3dirent_t *old_parent = NULL;
-	int old_par_size = s3fs_get_object(ctx->s3bucket, (const char *) directory, (uint8_t**) old_parent, 0, 0); //grabbing parent directory
+	int old_par_size = s3fs_get_object(ctx->s3bucket, (const char *) directory, (uint8_t**) &old_parent, 0, 0); //grabbing parent directory
+	printf("Parent directory grabbed.\n");
 
 	s3dirent_t *tgt = NULL;
-	int tgt_size = s3fs_get_object(ctx->s3bucket, path, (uint8_t**) tgt, 0, 0);
-
-	s3dirent_t *new_parent = old_parent;
-	int new_par_size = old_par_size;
+	int tgt_size = s3fs_get_object(ctx->s3bucket, path, (uint8_t**) &tgt, 0, 0);
 
 	s3dirent_t tgt_shell = old_parent[getObjectIndex(old_parent, old_par_size, base)];
 
-	char * nptemp = strdup(path);
-	char * ndirectory = dirname(nptemp);
+	char * nptemp = strdup(newpath);
+	char *nptemp2;
+	nptemp2 = dirname(nptemp);
+	char ndirectory[strlen(nptemp2)];
+	strcpy(ndirectory,nptemp2);
+
+	strcpy(nptemp,newpath);
+	nptemp2 = basename(nptemp);
+	char nbase[strlen(nptemp2)];
+	strcpy(nbase,nptemp2);
+
 	free(nptemp);
 
-	if(strcmp(directory,dirname(ndirectory))!=0){ //different parent directory. Keeps code size down
-		new_par_size = s3fs_get_object(ctx->s3bucket, (const char *) ndirectory, (uint8_t**) new_parent, 0, 0);
+	s3dirent_t *new_parent;
+	int new_par_size;
+	if(strcmp(directory,ndirectory)!=0){ //different parent directory. Keeps code size down		
+		new_par_size = s3fs_get_object(ctx->s3bucket, (const char *) ndirectory, (uint8_t**) &new_parent, 0, 0);
+	}else{
+		new_parent = old_parent;
+		new_par_size = old_par_size;
 	}
 
 	//no difference for directories or files. Just messing with dirent objects
 		
 	shrinkDir(old_parent,old_par_size,path,ctx);
 
-	strncpy((char *) tgt->name, ndirectory, 256);
-	growDir(tgt,new_parent,new_par_size,newpath, ctx); //swapping out directories holding pointer to tgt directory
+	strcpy((char *) tgt_shell.name, nbase);
+	growDir(tgt_shell,new_parent,new_par_size,newpath, ctx); //swapping out directories holding pointer to tgt directory
 
 	time(&old_parent->metadata.st_mtime);
 	time(&new_parent->metadata.st_mtime);
 	time(&tgt_shell.metadata.st_mtime);
 
-	s3fs_remove_object(ctx->s3bucket,path);
+	//s3fs_remove_object(ctx->s3bucket,path);
 
 	s3fs_put_object(ctx->s3bucket, newpath, (uint8_t *) tgt, tgt_size);
 
@@ -408,9 +490,16 @@ int fs_truncate(const char *path, off_t newsize) {
     s3context_t *ctx = GET_PRIVATE_DATA;
 
 	char * ptemp = strdup(path);
-	char *directory = dirname(ptemp);
+	char *ptemp2;
+	ptemp2 = dirname(ptemp);
+	char directory[strlen(ptemp2)];
+	strcpy(directory,ptemp2);
+
 	strcpy(ptemp,path);
-	char *base = basename(ptemp);
+	ptemp2 = basename(ptemp);
+	char base[strlen(ptemp2)];
+	strcpy(base,ptemp2);
+
 	free(ptemp);
 
 	uint8_t **tgt = NULL;
@@ -420,7 +509,7 @@ int fs_truncate(const char *path, off_t newsize) {
 	s3fs_put_object(ctx->s3bucket, path, *tgt, 0);
 
 	s3dirent_t *parent = NULL;
-	int par_size = s3fs_get_object(ctx->s3bucket, (const char *) directory, (uint8_t**) parent, 0, 0); //grabbing parent directory
+	int par_size = s3fs_get_object(ctx->s3bucket, (const char *) directory, (uint8_t**) &parent, 0, 0); //grabbing parent directory
 
 	s3dirent_t tgt_shell = parent[getObjectIndex(parent, par_size, base)];
 	time(&tgt_shell.metadata.st_mtime);
@@ -455,11 +544,13 @@ int fs_utime(const char *path, struct utimbuf *ubuf) {
 int fs_open(const char *path, struct fuse_file_info *fi) {
     fprintf(stderr, "fs_open(path\"%s\")\n", path);
     s3context_t *ctx = GET_PRIVATE_DATA;
-	int rs = s3fs_test_bucket(ctx->s3bucket);
-	if(rs==0) //bucket exists
-		return 0;
-	else
+	s3dirent_t *curdir;
+	int rs = s3fs_get_object(ctx->s3bucket, path, (uint8_t **) &curdir, 0, 0);
+	//int rs = s3fs_test_bucket(ctx->s3bucket);
+	if(rs < 0) //bucket does not exist
 		return -1;
+	else
+		return 0;
     //return -EIO;
 }
 
@@ -480,7 +571,7 @@ int fs_read(const char *path, char *buf, size_t size, off_t offset, struct fuse_
 	free(ptemp);
 	
 	s3dirent_t *temp = NULL;
-	int file_size = s3fs_get_object(ctx->s3bucket, path, (uint8_t**) temp, 0, 0);
+	int file_size = s3fs_get_object(ctx->s3bucket, path, (uint8_t**) &temp, 0, 0);
 
 	if(offset>file_size){
 		return 0;
@@ -489,16 +580,21 @@ int fs_read(const char *path, char *buf, size_t size, off_t offset, struct fuse_
 		; //not sure if something should happen. ???
 	}
 
-	int rs = s3fs_get_object(ctx->s3bucket, path, (uint8_t**) buf, offset, size); //might error out. Needs testing ???
+	int rs = s3fs_get_object(ctx->s3bucket, path, (uint8_t**) &buf, offset, size); //might error out. Needs testing ???
 
-	memcpy(buf[rs],0,sizeof(buf)-rs);
+	int empty[sizeof(buf)-rs];
+	int i = 0;
+	for(;i<sizeof(empty);i++){
+		empty[i]=0;
+	}
+	memcpy((uint8_t *) buf[rs],empty,sizeof(buf)-rs);
 
 	if(rs==-1){
 		return -1; //might need more sophicsticaed error message
 	}
 
 	s3dirent_t *parent = NULL; //grabbing parent for metadata update to atime
-	int par_size = s3fs_get_object(ctx->s3bucket, path, (uint8_t**) parent, 0, 0);
+	int par_size = s3fs_get_object(ctx->s3bucket, path, (uint8_t**) &parent, 0, 0);
 
 	time(&parent[getObjectIndex(parent, par_size, base)].metadata.st_atime); //updating access time for file
 
@@ -525,7 +621,7 @@ int fs_write(const char *path, const char *buf, size_t size, off_t offset, struc
 
 	int *first_half = NULL;
 
-	int rs = s3fs_get_object(ctx->s3bucket, path, (uint8_t **) first_half, 0, offset);
+	int rs = s3fs_get_object(ctx->s3bucket, path, (uint8_t **) &first_half, 0, offset);
 	if(rs == -1){
 		return -ENOMEM; //file DNE
 	}
@@ -550,7 +646,7 @@ int fs_write(const char *path, const char *buf, size_t size, off_t offset, struc
 	//rs+size accounts for growing the file from the middle
 
 	s3dirent_t *parent = NULL; //updating metadata
-	int par_size = s3fs_get_object(ctx->s3bucket, (const char *) base, (uint8_t **) parent, 0, 0);
+	int par_size = s3fs_get_object(ctx->s3bucket, (const char *) base, (uint8_t **) &parent, 0, 0);
 
 	time(&parent[getObjectIndex(parent, par_size, base)].metadata.st_mtime); //updating mod time
 
@@ -613,11 +709,14 @@ int fs_fsync(const char *path, int datasync, struct fuse_file_info *fi) {
 int fs_opendir(const char *path, struct fuse_file_info *fi) {
     fprintf(stderr, "fs_opendir(path=\"%s\")\n", path);
     s3context_t *ctx = GET_PRIVATE_DATA;
-	int rs = s3fs_test_bucket(ctx->s3bucket);
-	if(rs==0) //bucket exists
-		return 0;
-	else
+	s3dirent_t *curdir;
+	int rs = s3fs_get_object(ctx->s3bucket, path, (uint8_t **) &curdir, 0, 0);
+	//int rs = s3fs_test_bucket(ctx->s3bucket);
+	printf("rs = %d\n", rs);
+	if(rs < 0) //bucket does not exist
 		return -1;
+	else
+		return 0;
     //return -EIO;
 }
 
@@ -631,7 +730,8 @@ int fs_readdir(const char *path, void *buf, fuse_fill_dir_t filler, off_t offset
     s3context_t *ctx = GET_PRIVATE_DATA;
 
 	s3dirent_t *curdir = NULL;
-	int rs = s3fs_get_object(ctx->s3bucket, path, (uint8_t**) curdir, offset, 0);
+	int rs = s3fs_get_object(ctx->s3bucket, path, (uint8_t**) &curdir, offset, 0);
+	printf("rs = %d\n", rs);	
 	time(&curdir->metadata.st_atime); //reading the directoey requires an update to atime
 
 	int i = 0;
@@ -640,6 +740,7 @@ int fs_readdir(const char *path, void *buf, fuse_fill_dir_t filler, off_t offset
 		if(filler(buf,curdir[i].name,NULL,0)!=0){
 			return -ENOMEM;
 		}
+		//printf("Curdir[%d].name = %s\n",i,curdir[i].name);
 	}
 
 	return 0;
@@ -680,7 +781,7 @@ void *fs_init(struct fuse_conn_info *conn)
 	strcpy(root->name, ".");
 	root->type = 'd';
 	
-	root->metadata.st_mode = 755;
+	root->metadata.st_mode = (S_IFDIR | S_IRUSR | S_IWUSR | S_IXUSR);
 	root->metadata.st_uid = getuid();
 	//root->metadata.st_size = sizeof(s3dirent_t);
 	time(&root->metadata.st_atime);
@@ -703,8 +804,7 @@ void *fs_init(struct fuse_conn_info *conn)
 	time_t    st_ctime;   //time of last status change - Read: Create time
 	*/
 
-	uint8_t* sendthis = (uint8_t*) root;
-	s3fs_put_object(ctx->s3bucket, "/", sendthis, strlen(sendthis));
+	s3fs_put_object(ctx->s3bucket, "/", (uint8_t*) root, sizeof(s3dirent_t));
 
 	//printf("Done with fs_init %s %d\n", (uint8_t*) root, sizeof((uint8_t*) root));
 	free(root);
@@ -764,15 +864,22 @@ int fs_access(const char *path, int mask) {
     s3context_t *ctx = GET_PRIVATE_DATA;
 
 	char * ptemp = strdup(path);
-	char *directory = dirname(ptemp);
+	char *ptemp2;
+	ptemp2 = dirname(ptemp);
+	char directory[strlen(ptemp2)];
+	strcpy(directory,ptemp2);
+
 	strcpy(ptemp,path);
-	char *base = basename(ptemp);
+	ptemp2 = basename(ptemp);
+	char base[strlen(ptemp2)];
+	strcpy(base,ptemp2);
+
 	free(ptemp);
 
 	return 0; //complicated, might do if I have the time
 
 	s3dirent_t *parent = NULL;
-	int par_size = s3fs_get_object(ctx->s3bucket, (const char *) directory, (uint8_t**) parent, 0, 0);
+	int par_size = s3fs_get_object(ctx->s3bucket, (const char *) directory, (uint8_t**) &parent, 0, 0);
 
 	s3dirent_t tgt_shell = parent[getObjectIndex(parent, par_size, base)];
 
