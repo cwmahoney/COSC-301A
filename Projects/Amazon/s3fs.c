@@ -482,10 +482,6 @@ int fs_rename(const char *path, const char *newpath) {
 		s3fs_remove_object(ctx->s3bucket, path); //killing copy of tgt
 	}
 
-<<<<<<< HEAD
-=======
-
->>>>>>> cee430cc7f1148dc5274b118dc34bdd643dce071
 	return 0;
 	
     //return -EIO;
@@ -534,7 +530,7 @@ int fs_truncate(const char *path, off_t newsize) {
 	s3fs_get_object(ctx->s3bucket, path, tgt, 0, 0);
 
 	s3fs_remove_object(ctx->s3bucket,path);
-	s3fs_put_object(ctx->s3bucket, path, "", 0);
+	s3fs_put_object(ctx->s3bucket, path, (uint8_t *) "", 0);
 
 	s3dirent_t *parent = NULL; //grabbing parent for metadata update to atime
 	int par_size = s3fs_get_object(ctx->s3bucket, directory, (uint8_t**) &parent, 0, 0);
